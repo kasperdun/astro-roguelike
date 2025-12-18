@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import { GAME_CONFIG } from '../config/gameConfig';
 import {
     canPurchaseUpgrade,
-    deriveShipStartStats,
-    getUpgrade,
+    deriveRunStats,
+    getPurchasedLevel,
+    getUpgradeCostForLevel,
     type PurchaseResult,
     type PurchasedUpgrades,
     type UpgradeId
@@ -18,7 +19,26 @@ export type LevelId = 1 | 2;
 export type RunSession = {
     levelId: LevelId;
     hp: number;
+    maxHp: number;
     fuel: number;
+    maxFuel: number;
+    shield: number;
+    maxShield: number;
+    stats: {
+        bulletDamage: number;
+        bulletLifetimeSec: number;
+        bulletSpeedPxPerSec: number;
+        weaponFireRatePerSec: number;
+        shipAccelPxPerSec2: number;
+        shipMaxSpeedPxPerSec: number;
+        fuelDrainPerSec: number;
+        fuelDrainWhileThrustPerSec: number;
+        fuelDrainPerShot: number;
+        fuelRegenPerSec: number;
+        shieldRegenPerSec: number;
+        shieldRegenDelaySec: number;
+        collisionDamageMultiplier: number;
+    };
     minerals: number;
     scrap: number;
 };
@@ -37,6 +57,9 @@ type GameState = {
     /** Купленные апгрейды (meta-прогресс). */
     purchasedUpgrades: PurchasedUpgrades;
 
+    /** UI состояние дерева улучшений (камера/зум). Должно переживать покупки/переключения режимов. */
+    upgradeTreeViewport: { tx: number; ty: number; scale: number } | null;
+
     setActiveTab: (tab: MenuTabId) => void;
     selectLevel: (levelId: LevelId) => void;
     startRun: () => void;
@@ -47,8 +70,12 @@ type GameState = {
 
     applyDamageToShip: (amount: number) => void;
     consumeFuel: (amount: number) => void;
+    addFuel: (amount: number) => void;
+    addShield: (amount: number) => void;
 
     purchaseUpgrade: (id: UpgradeId) => PurchaseResult;
+
+    setUpgradeTreeViewport: (v: { tx: number; ty: number; scale: number }) => void;
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -61,22 +88,55 @@ export const useGameStore = create<GameState>((set, get) => ({
     bankMinerals: 0,
     bankScrap: 0,
     purchasedUpgrades: {},
+    upgradeTreeViewport: null,
 
     setActiveTab: (tab: MenuTabId) => set({ activeTab: tab }),
     selectLevel: (levelId) =>
         set((s) => (s.unlockedLevels[levelId] ? { selectedLevelId: levelId } : s)),
     startRun: () => {
         const { selectedLevelId, purchasedUpgrades } = get();
-        const derived = deriveShipStartStats(
-            { startHp: GAME_CONFIG.shipStartHp, startFuel: GAME_CONFIG.shipStartFuel },
-            purchasedUpgrades
-        );
+        const derived = deriveRunStats({
+            base: {
+                startHp: GAME_CONFIG.shipStartHp,
+                startFuel: GAME_CONFIG.shipStartFuel,
+                bulletDamage: GAME_CONFIG.bulletDamage,
+                bulletLifetimeSec: GAME_CONFIG.bulletLifetimeSec,
+                bulletSpeedPxPerSec: GAME_CONFIG.bulletSpeedPxPerSec,
+                weaponFireRatePerSec: GAME_CONFIG.weaponFireRatePerSec,
+                shipAccelPxPerSec2: GAME_CONFIG.shipAccelPxPerSec2,
+                shipMaxSpeedPxPerSec: GAME_CONFIG.shipMaxSpeedPxPerSec,
+                fuelDrainPerSec: GAME_CONFIG.fuelDrainPerSec,
+                fuelDrainWhileThrustPerSec: GAME_CONFIG.fuelDrainWhileThrustPerSec,
+                fuelDrainPerShot: GAME_CONFIG.fuelDrainPerShot,
+                shieldRegenDelaySec: 0.7
+            },
+            purchased: purchasedUpgrades
+        });
         set({
             mode: 'run',
             run: {
                 levelId: selectedLevelId,
                 hp: derived.startHp,
+                maxHp: derived.maxHp,
                 fuel: derived.startFuel,
+                maxFuel: derived.maxFuel,
+                shield: derived.maxShield,
+                maxShield: derived.maxShield,
+                stats: {
+                    bulletDamage: derived.bulletDamage,
+                    bulletLifetimeSec: derived.bulletLifetimeSec,
+                    bulletSpeedPxPerSec: derived.bulletSpeedPxPerSec,
+                    weaponFireRatePerSec: derived.weaponFireRatePerSec,
+                    shipAccelPxPerSec2: derived.shipAccelPxPerSec2,
+                    shipMaxSpeedPxPerSec: derived.shipMaxSpeedPxPerSec,
+                    fuelDrainPerSec: derived.fuelDrainPerSec,
+                    fuelDrainWhileThrustPerSec: derived.fuelDrainWhileThrustPerSec,
+                    fuelDrainPerShot: derived.fuelDrainPerShot,
+                    fuelRegenPerSec: derived.fuelRegenPerSec,
+                    shieldRegenPerSec: derived.shieldRegenPerSec,
+                    shieldRegenDelaySec: derived.shieldRegenDelaySec,
+                    collisionDamageMultiplier: derived.collisionDamageMultiplier
+                },
                 minerals: 0,
                 scrap: 0
             }
@@ -103,8 +163,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (amount <= 0) return;
         set((s) => {
             if (!s.run) return s;
-            const hp = Math.max(0, s.run.hp - amount);
-            return { run: { ...s.run, hp } };
+            const maxShield = s.run.maxShield ?? 0;
+            const shield = Math.max(0, Math.min(maxShield, s.run.shield ?? 0));
+
+            const usedFromShield = Math.min(shield, amount);
+            const shieldAfter = shield - usedFromShield;
+            const hpAfter = Math.max(0, s.run.hp - (amount - usedFromShield));
+
+            return { run: { ...s.run, shield: shieldAfter, hp: hpAfter } };
         });
         const run = get().run;
         if (run && run.hp <= 0) get().endRunToMenu();
@@ -121,21 +187,45 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (run && run.fuel <= 0) get().endRunToMenu();
     },
 
+    addFuel: (amount) => {
+        if (amount <= 0) return;
+        set((s) => {
+            if (!s.run) return s;
+            const max = s.run.maxFuel ?? s.run.fuel;
+            const fuel = Math.max(0, Math.min(max, s.run.fuel + amount));
+            return { run: { ...s.run, fuel } };
+        });
+    },
+
+    addShield: (amount) => {
+        if (amount <= 0) return;
+        set((s) => {
+            if (!s.run) return s;
+            const max = s.run.maxShield ?? 0;
+            if (max <= 0) return s;
+            const shield = Math.max(0, Math.min(max, (s.run.shield ?? 0) + amount));
+            return { run: { ...s.run, shield } };
+        });
+    },
+
     purchaseUpgrade: (id) => {
         const { bankMinerals, purchasedUpgrades } = get();
         const check = canPurchaseUpgrade({ id, minerals: bankMinerals, purchased: purchasedUpgrades });
         if (!check.ok) return check;
 
-        // canPurchaseUpgrade already validated; safe to use getUpgrade for the cost.
-        const cost = getUpgrade(id).costMinerals;
+        // canPurchaseUpgrade already validated; safe to compute the next cost.
+        const current = getPurchasedLevel(purchasedUpgrades, id);
+        const cost = getUpgradeCostForLevel(id, current + 1);
 
         set((s) => ({
             bankMinerals: s.bankMinerals - cost,
-            purchasedUpgrades: { ...s.purchasedUpgrades, [id]: true }
+            purchasedUpgrades: { ...s.purchasedUpgrades, [id]: current + 1 }
         }));
 
         return { ok: true };
-    }
+    },
+
+    setUpgradeTreeViewport: (v) => set({ upgradeTreeViewport: v })
 }));
 
 

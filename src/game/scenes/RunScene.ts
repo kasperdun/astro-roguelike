@@ -61,6 +61,7 @@ export class RunScene implements Scene {
   private shipInvulnLeft = 0;
   private fireCooldownLeft = 0;
   private isWarpingIn = false;
+  private shieldRegenBlockedLeft = 0;
 
   private spawnTimerLeft = 0;
 
@@ -216,8 +217,9 @@ export class RunScene implements Scene {
 
       this.hudText.text =
         `LEVEL ${run.levelId}\n` +
-        `HP: ${run.hp}\n` +
-        `FUEL: ${run.fuel}\n` +
+        `HP: ${Math.round(run.hp)}/${Math.round(run.maxHp)}\n` +
+        `SHIELD: ${Math.round(run.shield)}/${Math.round(run.maxShield)}\n` +
+        `FUEL: ${Math.round(run.fuel)}/${Math.round(run.maxFuel)}\n` +
         `MINERALS: ${run.minerals}\n` +
         `SCRAP: ${run.scrap}\n\n` +
         `WASD: thrust (inertia)\n` +
@@ -287,6 +289,7 @@ export class RunScene implements Scene {
     const store = useGameStore.getState();
     const run = store.run;
     if (!run) return;
+    const stats = run.stats;
 
     // aim: rotate ship towards cursor
     const mp = this.app.renderer.events.pointer.global;
@@ -296,8 +299,11 @@ export class RunScene implements Scene {
 
     // fuel drain
     const isThrust = this.input.w || this.input.a || this.input.s || this.input.d;
-    const fuelDrain = (GAME_CONFIG.fuelDrainPerSec + (isThrust ? GAME_CONFIG.fuelDrainWhileThrustPerSec : 0)) * dt;
-    store.consumeFuel(fuelDrain);
+    const drain = (stats.fuelDrainPerSec + (isThrust ? stats.fuelDrainWhileThrustPerSec : 0)) * dt;
+    const regen = stats.fuelRegenPerSec * dt;
+    const net = drain - regen;
+    if (net > 0) store.consumeFuel(net);
+    else if (net < 0) store.addFuel(-net);
     if (!useGameStore.getState().run) return; // could end the run
 
     // ship movement (WASD -> acceleration with inertia)
@@ -311,8 +317,8 @@ export class RunScene implements Scene {
       ay /= len;
     }
 
-    this.shipVx += ax * GAME_CONFIG.shipAccelPxPerSec2 * dt;
-    this.shipVy += ay * GAME_CONFIG.shipAccelPxPerSec2 * dt;
+    this.shipVx += ax * stats.shipAccelPxPerSec2 * dt;
+    this.shipVy += ay * stats.shipAccelPxPerSec2 * dt;
 
     // damping (exponential)
     const damp = Math.exp(-GAME_CONFIG.shipDampingPerSec * dt);
@@ -321,8 +327,8 @@ export class RunScene implements Scene {
 
     // clamp speed
     const sp = Math.hypot(this.shipVx, this.shipVy);
-    if (sp > GAME_CONFIG.shipMaxSpeedPxPerSec) {
-      const k = GAME_CONFIG.shipMaxSpeedPxPerSec / sp;
+    if (sp > stats.shipMaxSpeedPxPerSec) {
+      const k = stats.shipMaxSpeedPxPerSec / sp;
       this.shipVx *= k;
       this.shipVy *= k;
     }
@@ -334,6 +340,12 @@ export class RunScene implements Scene {
     // timers
     this.shipInvulnLeft = Math.max(0, this.shipInvulnLeft - dt);
     this.fireCooldownLeft = Math.max(0, this.fireCooldownLeft - dt);
+    this.shieldRegenBlockedLeft = Math.max(0, this.shieldRegenBlockedLeft - dt);
+
+    // shield regen (after delay)
+    if (run.maxShield > 0 && stats.shieldRegenPerSec > 0 && this.shieldRegenBlockedLeft <= 0) {
+      store.addShield(stats.shieldRegenPerSec * dt);
+    }
 
     // shooting
     if (this.input.firing) this.tryFire();
@@ -416,7 +428,7 @@ export class RunScene implements Scene {
         this.bullets.splice(bi, 1);
         hit = true;
 
-        a.hp -= GAME_CONFIG.bulletDamage;
+        a.hp -= stats.bulletDamage;
         flashAsteroid(a.g);
 
         // "Soft" kinetic response:
@@ -494,7 +506,8 @@ export class RunScene implements Scene {
         if (!circleHit(shipX, shipY, GAME_CONFIG.shipCollisionRadiusPx, a.g.x, a.g.y, a.r)) continue;
 
         this.shipInvulnLeft = GAME_CONFIG.shipInvulnAfterHitSec;
-        store.applyDamageToShip(GAME_CONFIG.asteroidCollisionDamage);
+        this.shieldRegenBlockedLeft = stats.shieldRegenDelaySec;
+        store.applyDamageToShip(GAME_CONFIG.asteroidCollisionDamage * stats.collisionDamageMultiplier);
 
         // simple push-out
         const dx = shipX - a.g.x;
@@ -518,14 +531,15 @@ export class RunScene implements Scene {
     const store = useGameStore.getState();
     const run = store.run;
     if (!run) return;
+    const stats = run.stats;
 
     if (this.fireCooldownLeft > 0) return;
     if (run.fuel <= 0) return;
 
-    const fireDelay = 1 / Math.max(0.001, GAME_CONFIG.weaponFireRatePerSec);
+    const fireDelay = 1 / Math.max(0.001, stats.weaponFireRatePerSec);
     this.fireCooldownLeft = fireDelay;
 
-    store.consumeFuel(GAME_CONFIG.fuelDrainPerShot);
+    store.consumeFuel(stats.fuelDrainPerShot);
     if (!useGameStore.getState().run) return;
 
     const dirX = Math.cos(this.ship.rotation);
@@ -539,8 +553,8 @@ export class RunScene implements Scene {
     g.x = x;
     g.y = y;
 
-    const vx = dirX * GAME_CONFIG.bulletSpeedPxPerSec + this.shipVx;
-    const vy = dirY * GAME_CONFIG.bulletSpeedPxPerSec + this.shipVy;
+    const vx = dirX * stats.bulletSpeedPxPerSec + this.shipVx;
+    const vy = dirY * stats.bulletSpeedPxPerSec + this.shipVy;
 
     this.world.addChild(g);
     this.bullets.push({
@@ -548,7 +562,7 @@ export class RunScene implements Scene {
       vx,
       vy,
       r: GAME_CONFIG.bulletRadiusPx,
-      life: GAME_CONFIG.bulletLifetimeSec
+      life: stats.bulletLifetimeSec
     });
   }
 

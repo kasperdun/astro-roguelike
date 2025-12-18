@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type SVGProps } from 'react';
 import { useGameStore } from '../../../../state/gameStore';
+import { GAME_CONFIG } from '../../../../config/gameConfig';
 import {
     UPGRADES,
     canPurchaseUpgrade,
+    deriveRunStats,
     getUpgradeAvailability,
+    getPurchasedLevel,
+    getUpgradeCostForLevel,
     type PurchaseResult,
     type UpgradeId,
     type UpgradeNode
@@ -31,14 +35,36 @@ export function UpgradeTreeView() {
     const bankMinerals = useGameStore((s) => s.bankMinerals);
     const purchasedUpgrades = useGameStore((s) => s.purchasedUpgrades);
     const purchaseUpgrade = useGameStore((s) => s.purchaseUpgrade);
+    const savedViewport = useGameStore((s) => s.upgradeTreeViewport);
+    const setSavedViewport = useGameStore((s) => s.setUpgradeTreeViewport);
 
     const wrapRef = useRef<HTMLDivElement | null>(null);
-    const [viewport, setViewport] = useState<Viewport>({ tx: 0, ty: 0, scale: 1 });
+    const [viewport, setViewport] = useState<Viewport>(savedViewport ?? { tx: 0, ty: 0, scale: 1 });
+    const viewportRef = useRef<Viewport>(savedViewport ?? { tx: 0, ty: 0, scale: 1 });
     const [drag, setDrag] = useState<{ lastClient: Vec2 } | null>(null);
     const [tooltip, setTooltip] = useState<TooltipState | null>(null);
     const [lastMsg, setLastMsg] = useState<string | null>(null);
 
-    const layout: Layout = useMemo(() => buildLayout(UPGRADES), []);
+    // Depend on UPGRADES so layout is recalculated on HMR / tree changes.
+    const layout: Layout = useMemo(() => buildLayout(UPGRADES), [UPGRADES]);
+
+    // If we already have a saved camera, restore it (e.g. after leaving the run back to menu).
+    useEffect(() => {
+        if (!savedViewport) return;
+        viewportRef.current = savedViewport;
+        setViewport(savedViewport);
+    }, [savedViewport?.tx, savedViewport?.ty, savedViewport?.scale]);
+
+    // Keep ref in sync so event handlers always see latest viewport without relying on functional updaters.
+    useEffect(() => {
+        viewportRef.current = viewport;
+    }, [viewport.tx, viewport.ty, viewport.scale]);
+
+    const commitViewport = (next: Viewport) => {
+        viewportRef.current = next;
+        setViewport(next);
+        setSavedViewport(next);
+    };
 
     useEffect(() => {
         const el = wrapRef.current;
@@ -47,8 +73,8 @@ export function UpgradeTreeView() {
         const resize = () => {
             const rect = el.getBoundingClientRect();
 
-            // Center "hull_1" as the main hub; fallback to layout bounds center if missing.
-            const hubId: UpgradeId = 'hull_1';
+            // Center root as the main hub; fallback to layout bounds center if missing.
+            const hubId: UpgradeId = 'weapon_damage';
             const hub = layout.nodeCenter[hubId] ?? {
                 x: (layout.bounds.minX + layout.bounds.maxX) / 2,
                 y: (layout.bounds.minY + layout.bounds.maxY) / 2
@@ -59,14 +85,27 @@ export function UpgradeTreeView() {
             const cy = rect.height / 2;
             const tx = cx - hub.x * targetScale;
             const ty = cy - hub.y * targetScale;
-            setViewport({ tx, ty, scale: targetScale });
+
+            // Important: do NOT recenter if user already positioned the camera.
+            // This prevents viewport reset when the layout container size changes (e.g. after purchase message appears).
+            if (savedViewport) return;
+            const next = { tx, ty, scale: targetScale };
+            commitViewport(next);
         };
 
         resize();
         const ro = new ResizeObserver(resize);
         ro.observe(el);
         return () => ro.disconnect();
-    }, [layout.bounds.maxX, layout.bounds.maxY, layout.bounds.minX, layout.bounds.minY, layout.nodeCenter]);
+    }, [
+        layout.bounds.maxX,
+        layout.bounds.maxY,
+        layout.bounds.minX,
+        layout.bounds.minY,
+        layout.nodeCenter,
+        savedViewport,
+        setSavedViewport
+    ]);
 
     // IMPORTANT: React attaches 'wheel' listeners as passive, so calling preventDefault inside onWheel
     // triggers "Unable to preventDefault inside passive event listener". We attach a native listener
@@ -82,18 +121,17 @@ export function UpgradeTreeView() {
             const sx = e.clientX - rect.left;
             const sy = e.clientY - rect.top;
 
-            setViewport((v) => {
-                const zoomIntensity = 0.0012;
-                const factor = Math.exp(-e.deltaY * zoomIntensity);
-                const nextScale = clamp(v.scale * factor, 0.45, 2.6);
+            const v = viewportRef.current;
+            const zoomIntensity = 0.0012;
+            const factor = Math.exp(-e.deltaY * zoomIntensity);
+            const nextScale = clamp(v.scale * factor, 0.45, 2.6);
 
-                // Zoom around cursor.
-                const wx = (sx - v.tx) / v.scale;
-                const wy = (sy - v.ty) / v.scale;
-                const nextTx = sx - wx * nextScale;
-                const nextTy = sy - wy * nextScale;
-                return { tx: nextTx, ty: nextTy, scale: nextScale };
-            });
+            // Zoom around cursor.
+            const wx = (sx - v.tx) / v.scale;
+            const wy = (sy - v.ty) / v.scale;
+            const nextTx = sx - wx * nextScale;
+            const nextTy = sy - wy * nextScale;
+            commitViewport({ tx: nextTx, ty: nextTy, scale: nextScale });
         };
 
         el.addEventListener('wheel', onWheelNative, { passive: false });
@@ -121,10 +159,38 @@ export function UpgradeTreeView() {
         const dx = next.x - drag.lastClient.x;
         const dy = next.y - drag.lastClient.y;
         setDrag({ lastClient: next });
-        setViewport((v) => ({ ...v, tx: v.tx + dx, ty: v.ty + dy }));
+        const v = viewportRef.current;
+        commitViewport({ ...v, tx: v.tx + dx, ty: v.ty + dy });
     };
 
     const onPointerUpOrCancel = () => setDrag(null);
+
+    const base = useMemo(
+        () => ({
+            startHp: GAME_CONFIG.shipStartHp,
+            startFuel: GAME_CONFIG.shipStartFuel,
+            bulletDamage: GAME_CONFIG.bulletDamage,
+            bulletLifetimeSec: GAME_CONFIG.bulletLifetimeSec,
+            bulletSpeedPxPerSec: GAME_CONFIG.bulletSpeedPxPerSec,
+            weaponFireRatePerSec: GAME_CONFIG.weaponFireRatePerSec,
+            shipAccelPxPerSec2: GAME_CONFIG.shipAccelPxPerSec2,
+            shipMaxSpeedPxPerSec: GAME_CONFIG.shipMaxSpeedPxPerSec,
+            fuelDrainPerSec: GAME_CONFIG.fuelDrainPerSec,
+            fuelDrainWhileThrustPerSec: GAME_CONFIG.fuelDrainWhileThrustPerSec,
+            fuelDrainPerShot: GAME_CONFIG.fuelDrainPerShot,
+            shieldRegenDelaySec: 0.7
+        }),
+        []
+    );
+
+    const derived = useMemo(
+        () =>
+            deriveRunStats({
+                base,
+                purchased: purchasedUpgrades
+            }),
+        [base, purchasedUpgrades]
+    );
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
@@ -150,179 +216,258 @@ export function UpgradeTreeView() {
                 </div>
             ) : null}
 
-            <div
-                ref={wrapRef}
-                onContextMenu={(e) => e.preventDefault()}
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUpOrCancel}
-                onPointerCancel={onPointerUpOrCancel}
-                style={{
-                    position: 'relative',
-                    flex: 1,
-                    border: '1px solid rgba(255,255,255,0.10)',
-                    borderRadius: 12,
-                    background: 'rgba(0,0,0,0.18)',
-                    overflow: 'hidden',
-                    touchAction: 'none',
-                    userSelect: 'none'
-                }}
-            >
-                {/* World layer */}
+            <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
                 <div
+                    ref={wrapRef}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onPointerDown={onPointerDown}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUpOrCancel}
+                    onPointerCancel={onPointerUpOrCancel}
                     style={{
-                        position: 'absolute',
-                        inset: 0,
-                        transform: `translate(${viewport.tx}px, ${viewport.ty}px) scale(${viewport.scale})`,
-                        transformOrigin: '0 0'
+                        position: 'relative',
+                        flex: 1,
+                        border: '1px solid rgba(255,255,255,0.10)',
+                        borderRadius: 12,
+                        background: 'rgba(0,0,0,0.18)',
+                        overflow: 'hidden',
+                        touchAction: 'none',
+                        userSelect: 'none',
+                        minHeight: 0
                     }}
                 >
-                    {/* Edges */}
-                    <svg
-                        width={layout.bounds.maxX - layout.bounds.minX}
-                        height={layout.bounds.maxY - layout.bounds.minY}
+                    {/* World layer */}
+                    <div
                         style={{
                             position: 'absolute',
-                            left: layout.bounds.minX,
-                            top: layout.bounds.minY,
-                            overflow: 'visible',
+                            inset: 0,
+                            transform: `translate(${viewport.tx}px, ${viewport.ty}px) scale(${viewport.scale})`,
+                            transformOrigin: '0 0'
+                        }}
+                    >
+                        {/* Edges */}
+                        <svg
+                            width={layout.bounds.maxX - layout.bounds.minX}
+                            height={layout.bounds.maxY - layout.bounds.minY}
+                            style={{
+                                position: 'absolute',
+                                left: layout.bounds.minX,
+                                top: layout.bounds.minY,
+                                overflow: 'visible',
+                                pointerEvents: 'none'
+                            }}
+                        >
+                            {layout.edges.map((e) => {
+                                // Extra guard: protects UI from stale layout during HMR or broken definitions.
+                                if (!e.from || !e.to) return null;
+                                return (
+                                    <line
+                                        key={e.key}
+                                        x1={e.from.x - layout.bounds.minX}
+                                        y1={e.from.y - layout.bounds.minY}
+                                        x2={e.to.x - layout.bounds.minX}
+                                        y2={e.to.y - layout.bounds.minY}
+                                        stroke={e.locked ? '#2a2f43' : '#4a557a'}
+                                        strokeWidth={2}
+                                    />
+                                );
+                            })}
+                        </svg>
+
+                        {/* Nodes */}
+                        {UPGRADES.map((u) => {
+                            const availability = getUpgradeAvailability(purchasedUpgrades, u.id);
+                            const level = getPurchasedLevel(purchasedUpgrades, u.id);
+                            const purchaseCheck = canPurchaseUpgrade({
+                                purchased: purchasedUpgrades,
+                                minerals: bankMinerals,
+                                id: u.id
+                            });
+
+                            const state: NodeUiState = level >= u.maxLevel
+                                ? 'maxed'
+                                : availability.kind === 'locked'
+                                    ? 'locked'
+                                    : purchaseCheck.ok
+                                        ? 'available_can_buy'
+                                        : 'available_cant_buy';
+
+                            const center = layout.nodeCenter[u.id];
+                            if (!center) return null;
+                            const size = 56;
+
+                            const border =
+                                state === 'maxed'
+                                    ? '#ffd25a'
+                                    : state === 'available_can_buy'
+                                        ? '#32e28c'
+                                        : state === 'available_cant_buy'
+                                            ? '#ff5a5a'
+                                            : '#2d344a';
+
+                            const bg =
+                                state === 'maxed'
+                                    ? '#2b2412'
+                                    : state === 'available_can_buy'
+                                        ? '#102418'
+                                        : state === 'available_cant_buy'
+                                            ? '#2a1214'
+                                            : '#0b1020';
+
+                            const isLocked = state === 'locked';
+                            const isMaxed = state === 'maxed';
+                            const isClickable = !isLocked && !isMaxed;
+
+                            const tooltipText = buildTooltipText({
+                                node: u,
+                                bankMinerals,
+                                purchased: level,
+                                purchaseCheck,
+                                availability
+                            });
+
+                            return (
+                                <button
+                                    key={u.id}
+                                    type="button"
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onMouseEnter={(e) => {
+                                        const el = wrapRef.current;
+                                        if (!el) return;
+                                        setTooltip({ nodeId: u.id, atClient: { x: e.clientX, y: e.clientY } });
+                                    }}
+                                    onMouseMove={(e) =>
+                                        tooltip && tooltip.nodeId === u.id && setTooltip({ nodeId: u.id, atClient: { x: e.clientX, y: e.clientY } })
+                                    }
+                                    onMouseLeave={() => setTooltip(null)}
+                                    aria-disabled={!isClickable}
+                                    onClick={() => {
+                                        if (!isClickable) return;
+                                        tryPurchase(u.id);
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        left: center.x - size / 2,
+                                        top: center.y - size / 2,
+                                        width: size,
+                                        height: size,
+                                        borderRadius: 12,
+                                        border: `2px solid ${border}`,
+                                        background: bg,
+                                        color: '#eef1ff',
+                                        cursor: isClickable ? 'pointer' : 'not-allowed',
+                                        display: 'grid',
+                                        placeItems: 'center',
+                                        padding: 0
+                                    }}
+                                    aria-label={`${u.title}. ${tooltipText.replaceAll('\n', ' ')}`}
+                                >
+                                    <div style={{ display: 'grid', placeItems: 'center', gap: 6 }}>
+                                        <UpgradeIconSvg icon={u.icon} />
+                                        <div style={{ fontSize: 10, fontWeight: 800, lineHeight: 1, textAlign: 'center' }}>
+                                            {isMaxed ? 'MAX' : getUpgradeCostForLevel(u.id, level + 1)}
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Tooltip layer */}
+                    {tooltip ? (
+                        <Tooltip
+                            atClient={tooltip.atClient}
+                            content={buildTooltipText({
+                                node: getNodeById(tooltip.nodeId),
+                                bankMinerals,
+                                purchased: getPurchasedLevel(purchasedUpgrades, tooltip.nodeId),
+                                purchaseCheck: canPurchaseUpgrade({ purchased: purchasedUpgrades, minerals: bankMinerals, id: tooltip.nodeId }),
+                                availability: getUpgradeAvailability(purchasedUpgrades, tooltip.nodeId)
+                            })}
+                        />
+                    ) : null}
+
+                    {/* Small help */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            left: 12,
+                            bottom: 10,
+                            fontSize: 12,
+                            opacity: 0.65,
                             pointerEvents: 'none'
                         }}
                     >
-                        {layout.edges.map((e) => (
-                            <line
-                                key={e.key}
-                                x1={e.from.x - layout.bounds.minX}
-                                y1={e.from.y - layout.bounds.minY}
-                                x2={e.to.x - layout.bounds.minX}
-                                y2={e.to.y - layout.bounds.minY}
-                                stroke={e.locked ? '#2a2f43' : '#4a557a'}
-                                strokeWidth={2}
-                            />
-                        ))}
-                    </svg>
-
-                    {/* Nodes */}
-                    {UPGRADES.map((u) => {
-                        const availability = getUpgradeAvailability(purchasedUpgrades, u.id);
-                        const purchaseCheck = canPurchaseUpgrade({
-                            purchased: purchasedUpgrades,
-                            minerals: bankMinerals,
-                            id: u.id
-                        });
-
-                        const state: NodeUiState = purchasedUpgrades[u.id]
-                            ? 'maxed'
-                            : availability.kind === 'locked'
-                                ? 'locked'
-                                : purchaseCheck.ok
-                                    ? 'available_can_buy'
-                                    : 'available_cant_buy';
-
-                        const center = layout.nodeCenter[u.id];
-                        const size = 56;
-
-                        const border =
-                            state === 'maxed'
-                                ? '#ffd25a'
-                                : state === 'available_can_buy'
-                                    ? '#32e28c'
-                                    : state === 'available_cant_buy'
-                                        ? '#ff5a5a'
-                                        : '#2d344a';
-
-                        const bg =
-                            state === 'maxed'
-                                ? '#2b2412'
-                                : state === 'available_can_buy'
-                                    ? '#102418'
-                                    : state === 'available_cant_buy'
-                                        ? '#2a1214'
-                                        : '#0b1020';
-
-                        const isLocked = state === 'locked';
-                        const isMaxed = state === 'maxed';
-                        const canBuy = state === 'available_can_buy';
-                        const isClickable = !isLocked && !isMaxed;
-
-                        const tooltipText = buildTooltipText({
-                            node: u,
-                            bankMinerals,
-                            purchased: purchasedUpgrades[u.id] ? 1 : 0,
-                            purchaseCheck,
-                            availability
-                        });
-
-                        return (
-                            <button
-                                key={u.id}
-                                type="button"
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onMouseEnter={(e) => {
-                                    const el = wrapRef.current;
-                                    if (!el) return;
-                                    setTooltip({ nodeId: u.id, atClient: { x: e.clientX, y: e.clientY } });
-                                }}
-                                onMouseMove={(e) => tooltip && tooltip.nodeId === u.id && setTooltip({ nodeId: u.id, atClient: { x: e.clientX, y: e.clientY } })}
-                                onMouseLeave={() => setTooltip(null)}
-                                disabled={!isClickable}
-                                onClick={() => tryPurchase(u.id)}
-                                style={{
-                                    position: 'absolute',
-                                    left: center.x - size / 2,
-                                    top: center.y - size / 2,
-                                    width: size,
-                                    height: size,
-                                    borderRadius: 12,
-                                    border: `2px solid ${border}`,
-                                    background: bg,
-                                    color: '#eef1ff',
-                                    cursor: isClickable ? 'pointer' : 'not-allowed',
-                                    display: 'grid',
-                                    placeItems: 'center',
-                                    padding: 0
-                                }}
-                                aria-label={`${u.title}. ${tooltipText.replaceAll('\n', ' ')}`}
-                            >
-                                <div style={{ display: 'grid', placeItems: 'center', gap: 6 }}>
-                                    <UpgradeIconSvg icon={u.icon} />
-                                    <div style={{ fontSize: 10, fontWeight: 800, lineHeight: 1, textAlign: 'center' }}>
-                                        {isMaxed ? 'MAX' : u.costMinerals}
-                                    </div>
-                                </div>
-                            </button>
-                        );
-                    })}
+                        Wheel: zoom • Drag LMB/RMB: pan
+                    </div>
                 </div>
 
-                {/* Tooltip layer */}
-                {tooltip ? (
-                    <Tooltip
-                        atClient={tooltip.atClient}
-                        content={buildTooltipText({
-                            node: getNodeById(tooltip.nodeId),
-                            bankMinerals,
-                            purchased: purchasedUpgrades[tooltip.nodeId] ? 1 : 0,
-                            purchaseCheck: canPurchaseUpgrade({ purchased: purchasedUpgrades, minerals: bankMinerals, id: tooltip.nodeId }),
-                            availability: getUpgradeAvailability(purchasedUpgrades, tooltip.nodeId)
-                        })}
-                    />
-                ) : null}
-
-                {/* Small help */}
-                <div
-                    style={{
-                        position: 'absolute',
-                        left: 12,
-                        bottom: 10,
-                        fontSize: 12,
-                        opacity: 0.65,
-                        pointerEvents: 'none'
-                    }}
-                >
-                    Wheel: zoom • Drag LMB/RMB: pan
-                </div>
+                <StatsPanel base={base} derived={derived} />
             </div>
+        </div>
+    );
+}
+
+function StatsPanel({
+    base,
+    derived
+}: {
+    base: {
+        startHp: number;
+        startFuel: number;
+        bulletDamage: number;
+        bulletLifetimeSec: number;
+        bulletSpeedPxPerSec: number;
+        weaponFireRatePerSec: number;
+        shipMaxSpeedPxPerSec: number;
+    };
+    derived: ReturnType<typeof deriveRunStats>;
+}) {
+    const line = (
+        label: string,
+        baseValue: number,
+        bonusValue: number,
+        fmt: (n: number) => string = (n) => `${Math.round(n)}`
+    ) => {
+        const eps = 1e-6;
+        const showBonus = Math.abs(bonusValue) > eps;
+        return (
+            <div key={label} style={{ lineHeight: 1.55, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ opacity: 0.92 }}>{label} </span>
+                <span style={{ fontWeight: 800 }}>{fmt(baseValue)} </span>
+                {showBonus ? (
+                    <span style={{ color: '#32e28c', fontWeight: 800 }}>
+                        ({bonusValue >= 0 ? '+' : ''}
+                        {fmt(bonusValue)})
+                    </span>
+                ) : null}
+            </div>
+        );
+    };
+
+    return (
+        <div
+            style={{
+                width: 320,
+                flex: '0 0 320px',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: 12,
+                background: 'rgba(0,0,0,0.18)',
+                padding: '12px 12px',
+                overflow: 'auto'
+            }}
+        >
+            <div style={{ fontSize: 14, fontWeight: 900, marginBottom: 8 }}>Статы</div>
+
+            {line('Урон', base.bulletDamage, derived.bulletDamage - base.bulletDamage)}
+            {line('Здоровье', base.startHp, derived.maxHp - base.startHp)}
+            {line('Топливо', base.startFuel, derived.maxFuel - base.startFuel)}
+            {line('Скорострельность', base.weaponFireRatePerSec, derived.weaponFireRatePerSec - base.weaponFireRatePerSec, (n) => n.toFixed(2))}
+            {line('Скорость пули', base.bulletSpeedPxPerSec, derived.bulletSpeedPxPerSec - base.bulletSpeedPxPerSec)}
+            {line('Дальность (время жизни)', base.bulletLifetimeSec, derived.bulletLifetimeSec - base.bulletLifetimeSec, (n) => n.toFixed(2))}
+            {line('Скорость корабля', base.shipMaxSpeedPxPerSec, derived.shipMaxSpeedPxPerSec - base.shipMaxSpeedPxPerSec)}
+            {line('Реген топлива', 0, derived.fuelRegenPerSec, (n) => n.toFixed(2))}
+            {line('Щит', 0, derived.maxShield)}
         </div>
     );
 }
@@ -336,7 +481,7 @@ function getNodeById(id: UpgradeId): UpgradeNode {
 function buildTooltipText(args: {
     node: UpgradeNode;
     bankMinerals: number;
-    purchased: number; // 0/1 for MVP nodes
+    purchased: number;
     purchaseCheck: PurchaseResult;
     availability: ReturnType<typeof getUpgradeAvailability>;
 }): string {
@@ -347,20 +492,27 @@ function buildTooltipText(args: {
     lines.push(node.description);
     lines.push('');
 
-    lines.push(`Cost: ${node.costMinerals} minerals`);
-    lines.push(`Upgrades: ${purchased}/1`);
+    const isMaxed = purchased >= node.maxLevel;
+    const nextCost = isMaxed ? null : getUpgradeCostForLevel(node.id, purchased + 1);
 
-    if (node.requires.length) lines.push(`Requires: ${node.requires.join(', ')}`);
-    if (availability.kind === 'locked') lines.push(`Missing: ${availability.missing.join(', ')}`);
+    lines.push(`Level: ${purchased}/${node.maxLevel}`);
+    lines.push(`Next cost: ${nextCost ?? 'MAX'} minerals`);
+
+    if (node.requires.length) {
+        lines.push(`Requires: ${node.requires.map((r) => `${r.id} (lvl ${r.level})`).join(', ')}`);
+    }
+    if (availability.kind === 'locked') {
+        lines.push(`Missing: ${availability.missing.map((r) => `${r.id} (lvl ${r.level})`).join(', ')}`);
+    }
 
     return lines.join('\n');
 }
 
 function renderPurchaseMessage(res: PurchaseResult): string {
-    if (res.ok) return 'Purchased! Bonuses will apply on next run start.';
+    if (res.ok) return 'Purchased! Combat/movement bonuses apply on next run start (economy bonuses apply immediately).';
 
-    if (res.reason === 'already_bought') return 'Already purchased.';
-    if (res.reason === 'locked') return `Locked. Missing: ${res.missing.join(', ')}`;
+    if (res.reason === 'maxed') return 'Already maxed.';
+    if (res.reason === 'locked') return `Locked. Missing: ${res.missing.map((m) => `${m.id} (lvl ${m.level})`).join(', ')}`;
     if (res.reason === 'not_enough_minerals') return `Not enough minerals: need ${res.needed}, have ${res.have}.`;
 
     return 'Cannot purchase.';
@@ -393,10 +545,11 @@ function buildLayout(nodes: readonly UpgradeNode[]): Layout {
     const edges: Layout['edges'] = [];
     for (const n of nodes) {
         for (const req of n.requires) {
-            const from = nodeCenter[req];
+            const from = nodeCenter[req.id];
             const to = nodeCenter[n.id];
+            if (!from || !to) continue;
             edges.push({
-                key: `${req}->${n.id}`,
+                key: `${req.id}->${n.id}`,
                 from,
                 to,
                 locked: false
@@ -418,46 +571,7 @@ function UpgradeIconSvg({ icon }: { icon: UpgradeNode['icon'] }) {
     const stroke = 'rgba(255,255,255,0.92)';
     const strokeWidth = 2;
 
-    if (icon === 'fuel') {
-        return (
-            <svg {...common}>
-                <path d="M6 3h8v18H6V3Z" stroke={stroke} strokeWidth={strokeWidth} />
-                <path d="M14 7h2l2 2v8a3 3 0 0 1-3 3h-1" stroke={stroke} strokeWidth={strokeWidth} />
-                <path d="M8 7h4" stroke={stroke} strokeWidth={strokeWidth} />
-            </svg>
-        );
-    }
-
-    if (icon === 'thrusters') {
-        return (
-            <svg {...common}>
-                <path d="M12 3v8" stroke={stroke} strokeWidth={strokeWidth} />
-                <path d="M7 11l5 3 5-3" stroke={stroke} strokeWidth={strokeWidth} />
-                <path d="M9 14c0 3 1 6 3 7 2-1 3-4 3-7" stroke={stroke} strokeWidth={strokeWidth} />
-            </svg>
-        );
-    }
-
-    if (icon === 'mining') {
-        return (
-            <svg {...common}>
-                <path d="M4 12l6-6 4 4-6 6H4v-4Z" stroke={stroke} strokeWidth={strokeWidth} />
-                <path d="M14 10l4 4" stroke={stroke} strokeWidth={strokeWidth} />
-                <path d="M16 14l-2 2" stroke={stroke} strokeWidth={strokeWidth} />
-            </svg>
-        );
-    }
-
-    if (icon === 'hull') {
-        return (
-            <svg {...common}>
-                <path d="M12 3l7 4v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4Z" stroke={stroke} strokeWidth={strokeWidth} />
-                <path d="M12 6v14" stroke={stroke} strokeWidth={strokeWidth} opacity={0.6} />
-            </svg>
-        );
-    }
-
-    // core
+    void icon;
     return (
         <svg {...common}>
             <circle cx="12" cy="12" r="7" stroke={stroke} strokeWidth={strokeWidth} />
