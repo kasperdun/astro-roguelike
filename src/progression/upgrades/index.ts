@@ -19,6 +19,8 @@ export type UpgradeEffect = {
     asteroidMineralYieldBonus?: number;
 };
 
+export type UpgradeIcon = 'core' | 'hull' | 'fuel' | 'thrusters' | 'mining';
+
 export type UpgradeNode = {
     id: UpgradeId;
     title: string;
@@ -28,7 +30,13 @@ export type UpgradeNode = {
     /** Требования: все перечисленные апгрейды должны быть куплены. */
     requires: readonly UpgradeId[];
     effect: UpgradeEffect;
-    /** Позиция для отрисовки дерева в UI. */
+    /** Иконка для UI. */
+    icon: UpgradeIcon;
+    /**
+     * Позиция для отрисовки дерева в UI.
+     * Единицы — логическая "сетка"; UI сам умножает на spacing.
+     * Ожидается, что 0/0 — центральный узел, а ветки расходятся в стороны.
+     */
     pos: { col: number; row: number };
 };
 
@@ -53,6 +61,7 @@ export const UPGRADES: readonly UpgradeNode[] = [
         costMinerals: 10,
         requires: [],
         effect: { startHpBonus: 20 },
+        icon: 'core',
         pos: { col: 0, row: 0 }
     },
     {
@@ -62,7 +71,8 @@ export const UPGRADES: readonly UpgradeNode[] = [
         costMinerals: 25,
         requires: ['hull_1'],
         effect: { startHpBonus: 35 },
-        pos: { col: 1, row: 0 }
+        icon: 'hull',
+        pos: { col: 2, row: 0 }
     },
     {
         id: 'hull_3',
@@ -71,7 +81,8 @@ export const UPGRADES: readonly UpgradeNode[] = [
         costMinerals: 55,
         requires: ['hull_2'],
         effect: { startHpBonus: 55 },
-        pos: { col: 2, row: 0 }
+        icon: 'hull',
+        pos: { col: 4, row: 0 }
     },
 
     {
@@ -79,9 +90,10 @@ export const UPGRADES: readonly UpgradeNode[] = [
         title: 'Fuel Tank I',
         description: '+20 Fuel. Базовый запас топлива.',
         costMinerals: 10,
-        requires: [],
+        requires: ['hull_1'],
         effect: { startFuelBonus: 20 },
-        pos: { col: 0, row: 1 }
+        icon: 'fuel',
+        pos: { col: 0, row: 2 }
     },
     {
         id: 'tank_2',
@@ -90,7 +102,8 @@ export const UPGRADES: readonly UpgradeNode[] = [
         costMinerals: 25,
         requires: ['tank_1'],
         effect: { startFuelBonus: 35 },
-        pos: { col: 1, row: 1 }
+        icon: 'fuel',
+        pos: { col: 0, row: 4 }
     },
     {
         id: 'tank_3',
@@ -99,7 +112,8 @@ export const UPGRADES: readonly UpgradeNode[] = [
         costMinerals: 55,
         requires: ['tank_2'],
         effect: { startFuelBonus: 55 },
-        pos: { col: 2, row: 1 }
+        icon: 'fuel',
+        pos: { col: 0, row: 6 }
     },
 
     {
@@ -109,7 +123,8 @@ export const UPGRADES: readonly UpgradeNode[] = [
         costMinerals: 15,
         requires: ['hull_1'],
         effect: {},
-        pos: { col: 1, row: 2 }
+        icon: 'thrusters',
+        pos: { col: 2, row: -2 }
     },
     {
         id: 'thrusters_2',
@@ -118,7 +133,8 @@ export const UPGRADES: readonly UpgradeNode[] = [
         costMinerals: 35,
         requires: ['thrusters_1'],
         effect: {},
-        pos: { col: 2, row: 2 }
+        icon: 'thrusters',
+        pos: { col: 4, row: -2 }
     },
 
     {
@@ -126,9 +142,10 @@ export const UPGRADES: readonly UpgradeNode[] = [
         title: 'Mining Yield I',
         description: '+1 mineral per asteroid. Упрощённая экономика (MVP).',
         costMinerals: 12,
-        requires: [],
+        requires: ['hull_1'],
         effect: { asteroidMineralYieldBonus: 1 },
-        pos: { col: 0, row: 3 }
+        icon: 'mining',
+        pos: { col: -2, row: 0 }
     },
     {
         id: 'mining_2',
@@ -137,7 +154,8 @@ export const UPGRADES: readonly UpgradeNode[] = [
         costMinerals: 28,
         requires: ['mining_1'],
         effect: { asteroidMineralYieldBonus: 1 },
-        pos: { col: 1, row: 3 }
+        icon: 'mining',
+        pos: { col: -4, row: 0 }
     }
 ] as const;
 

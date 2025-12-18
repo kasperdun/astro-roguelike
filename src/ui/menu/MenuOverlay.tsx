@@ -39,7 +39,9 @@ export function MenuOverlay({ onGoToMine }: Props) {
             background: 'rgba(0,0,0,0.35)',
             borderRadius: 12,
             padding: 16,
-            overflow: 'auto'
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
           {activeTab === 'update' ? <UpdateTab /> : null}
