@@ -1,4 +1,5 @@
 import { useGameStore, type MenuTabId } from '../../../state/gameStore';
+import { audio } from '../../../audio/audio';
 
 const tabs: Array<{ id: MenuTabId; label: string }> = [
   { id: 'update', label: 'Update' },
@@ -23,7 +24,10 @@ export function TabBar() {
           <button
             key={t.id}
             type="button"
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => {
+              audio.playMenuClick();
+              setActiveTab(t.id);
+            }}
             style={{
               padding: '8px 12px',
               borderRadius: 10,

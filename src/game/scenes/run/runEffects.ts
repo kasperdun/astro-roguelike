@@ -1,8 +1,28 @@
 import { gsap } from 'gsap';
-import { Container, Graphics } from 'pixi.js';
+import { AnimatedSprite, Container, Graphics } from 'pixi.js';
+import { preloadRunAssets } from '../../runAssets';
 import { lerp } from './runMath';
 
-export function flashAsteroid(g: Graphics) {
+// Start loading early.
+void preloadRunAssets();
+
+export function flashAsteroid(g: { alpha: number }) {
+  gsap.killTweensOf(g);
+  const base = g.alpha;
+  gsap.to(g, {
+    duration: 0.06,
+    alpha: 0.45,
+    yoyo: true,
+    repeat: 1,
+    ease: 'power1.out',
+    onComplete: () => {
+      g.alpha = base;
+    }
+  });
+}
+
+export function flashEnemy(g: { alpha: number }) {
+  // Same visual language as asteroid hit flash, but kept separate for future tuning.
   gsap.killTweensOf(g);
   const base = g.alpha;
   gsap.to(g, {
@@ -40,6 +60,33 @@ export function spawnExplosion(parent: Container, x: number, y: number, r: numbe
     onComplete: () => {
       parent.removeChild(g);
     }
+  });
+}
+
+export function spawnAsteroidExplosion(parent: Container, x: number, y: number, r: number) {
+  // Keep the old ring as a fallback / instant feedback while the sheet loads (first time).
+  spawnExplosion(parent, x, y, r);
+
+  void preloadRunAssets().then((assets) => {
+    const anim = new AnimatedSprite(assets.asteroidExplodeFrames);
+    anim.anchor.set(0.5);
+    anim.x = x;
+    anim.y = y;
+
+    // Visual size: slightly larger than the asteroid.
+    const size = r * 2.6;
+    anim.width = size;
+    anim.height = size;
+
+    anim.loop = false;
+    anim.animationSpeed = 0.9;
+    anim.onComplete = () => {
+      parent.removeChild(anim);
+      anim.destroy();
+    };
+
+    parent.addChild(anim);
+    anim.play();
   });
 }
 

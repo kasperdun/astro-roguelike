@@ -1,4 +1,5 @@
 import { useGameStore, type LevelId } from '../../../state/gameStore';
+import { audio } from '../../../audio/audio';
 
 type Props = {
   onGoToMine: () => void;
@@ -55,7 +56,10 @@ export function BottomBar({ onGoToMine }: Props) {
                 key={lvl}
                 type="button"
                 disabled={!isUnlocked}
-                onClick={() => selectLevel(lvl)}
+                onClick={() => {
+                  audio.playMenuClick();
+                  selectLevel(lvl);
+                }}
                 style={{
                   width: 44,
                   height: 36,
@@ -76,7 +80,10 @@ export function BottomBar({ onGoToMine }: Props) {
 
       <button
         type="button"
-        onClick={onGoToMine}
+        onClick={() => {
+          audio.playWarp();
+          onGoToMine();
+        }}
         style={{
           height: 48,
           padding: '0 18px',

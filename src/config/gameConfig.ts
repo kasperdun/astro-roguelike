@@ -3,7 +3,7 @@ export const GAME_CONFIG = {
     shipStartHp: 100,
 
     /** Стартовое топливо в начале уровня (MVP: заглушка). */
-    shipStartFuel: 25,
+    shipStartFuel: 35,
 
     /** Радиус корабля для коллизий (в пикселях). */
     shipCollisionRadiusPx: 14,
@@ -66,10 +66,10 @@ export const GAME_CONFIG = {
     asteroidsSpawnIntervalSec: 5.55,
 
     /** Минимальный радиус астероида (px). */
-    asteroidMinRadiusPx: 14,
+    asteroidMinRadiusPx: 36,
 
     /** Максимальный радиус астероида (px). */
-    asteroidMaxRadiusPx: 36,
+    asteroidMaxRadiusPx: 59,
 
     /** HP астероида при минимальном радиусе (линейно растёт к max radius). */
     asteroidHpAtMinRadius: 40,
@@ -108,7 +108,74 @@ export const GAME_CONFIG = {
     warpInDurationSec: 0.6,
 
     /** Начальное количество астероидов при старте сцены (чтобы сразу было “живенько”). */
-    asteroidsInitialCount: 4
+    asteroidsInitialCount: 4,
+
+    // -----------------------------
+    // Enemies (combat layer)
+    // -----------------------------
+
+    /** Стартовая задержка перед первым спавном врагов после начала рана (сек). */
+    enemiesSpawnStartAfterSec: 6,
+
+    /** Максимум врагов одновременно (ограничение производительности и читаемости боя). */
+    enemiesMaxCount: 4,
+
+    /** Базовый интервал спавна врагов (сек). Может быть ускорен прогрессом (kills/time). */
+    enemiesSpawnIntervalSec: 7.5,
+
+    /** Насколько спавн ускоряется от каждого убийства врага (сек). */
+    enemiesSpawnIntervalReducePerKillSec: 0.15,
+
+    /** Минимально возможный интервал спавна врагов (сек). */
+    enemiesSpawnIntervalMinSec: 2.6,
+
+    /** Радиус врага для коллизий (в пикселях). */
+    enemyRadiusPx: 14,
+
+    /** HP врага (база). */
+    enemyHp: 60,
+
+    /** Ускорение врага (px/s^2). Определяет “агрессивность” перемещения. */
+    enemyAccelPxPerSec2: 520,
+
+    /** Максимальная скорость врага (px/s). */
+    enemyMaxSpeedPxPerSec: 120,
+
+    /** Демпфирование скорости врага (1/s). Чем больше — тем быстрее “гасит” инерцию. */
+    enemyDampingPerSec: 2.2,
+
+    /** Предпочитаемая дистанция врага до корабля (px). Враг пытается держать её в бою. */
+    enemyPreferredRangePx: 210,
+
+    /** Ширина “мертвой зоны” вокруг preferredRange (px), чтобы враг не дрожал. */
+    enemyRangeHysteresisPx: 35,
+
+    /** Базовая частота стрельбы врага (выстрелов в секунду). */
+    enemyFireRatePerSec: 1.05,
+
+    /** Скорость пули врага (px/s). */
+    enemyBulletSpeedPxPerSec: 260,
+
+    /** Время жизни пули врага (сек). */
+    enemyBulletLifetimeSec: 1.45,
+
+    /** Радиус пули врага для коллизий (px). */
+    enemyBulletRadiusPx: 3,
+
+    /** Урон пули врага по кораблю. */
+    enemyBulletDamage: 52,
+
+    /** Урон кораблю при столкновении с врагом. */
+    enemyCollisionDamage: 62,
+
+    /** Сколько минералов выпадает за убитого врага (база). */
+    enemyDropMineralsPerEnemy: 6,
+
+    /** Шанс выпадения скрапа при убийстве врага (0..1). */
+    enemyDropScrapChance: 0.42,
+
+    /** Сколько скрапа выпадает (если выпал). */
+    enemyDropScrapAmount: 1
 } as const;
 
 

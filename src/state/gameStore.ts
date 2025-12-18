@@ -9,6 +9,8 @@ import {
     type UpgradeId
 } from '../progression/upgrades';
 import { getRunBaseStats } from './runBaseStats';
+import { audio } from '../audio/audio';
+import { buildSaveFromState, saveGame, type SaveV1 } from '../persistence/save';
 
 export type GameMode = 'menu' | 'run';
 
@@ -50,6 +52,9 @@ type GameState = {
     unlockedLevels: Record<LevelId, boolean>;
     run: RunSession | null;
 
+    /** True after we loaded & applied save data once. */
+    hasHydrated: boolean;
+
     /** Минералы в "банке" (meta-прогресс). Тратятся на апгрейды. */
     bankMinerals: number;
     /** Скрап в "банке" (meta-прогресс). Пока не используется (заложено под крафт). */
@@ -64,6 +69,7 @@ type GameState = {
     selectLevel: (levelId: LevelId) => void;
     startRun: () => void;
     endRunToMenu: () => void;
+    hydrateFromSave: (save: SaveV1) => void;
 
     addMinerals: (amount: number) => void;
     addScrap: (amount: number) => void;
@@ -78,12 +84,28 @@ type GameState = {
     setUpgradeTreeViewport: (v: { tx: number; ty: number; scale: number }) => void;
 };
 
+function autosaveProgress(get: () => GameState) {
+    const s = get();
+    const save = buildSaveFromState({
+        bankMinerals: s.bankMinerals,
+        bankScrap: s.bankScrap,
+        purchasedUpgrades: s.purchasedUpgrades,
+        unlockedLevels: s.unlockedLevels,
+        selectedLevelId: s.selectedLevelId,
+        upgradeTreeViewport: s.upgradeTreeViewport
+    });
+    void saveGame(save).catch(() => {
+        // Ignore storage errors (private mode / quota). The game remains playable.
+    });
+}
+
 export const useGameStore = create<GameState>((set, get) => ({
     mode: 'menu',
     activeTab: 'update',
     selectedLevelId: 1,
     unlockedLevels: { 1: true, 2: false },
     run: null,
+    hasHydrated: false,
 
     bankMinerals: 0,
     bankScrap: 0,
@@ -91,7 +113,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     upgradeTreeViewport: null,
 
     setActiveTab: (tab: MenuTabId) => set({ activeTab: tab }),
-    selectLevel: (levelId) =>
+    selectLevel: (levelId: LevelId) =>
         set((s) => (s.unlockedLevels[levelId] ? { selectedLevelId: levelId } : s)),
     startRun: () => {
         const { selectedLevelId, purchasedUpgrades } = get();
@@ -129,7 +151,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
         });
     },
-    endRunToMenu: () =>
+    endRunToMenu: () => {
         set((s) => {
             const run = s.run;
             if (!run) return { mode: 'menu', run: null };
@@ -139,7 +161,21 @@ export const useGameStore = create<GameState>((set, get) => ({
                 bankMinerals: s.bankMinerals + run.minerals,
                 bankScrap: s.bankScrap + run.scrap
             };
-        }),
+        });
+        autosaveProgress(get);
+    },
+
+    hydrateFromSave: (save: SaveV1) =>
+        set((s) => ({
+            ...s,
+            hasHydrated: true,
+            bankMinerals: save.bankMinerals,
+            bankScrap: save.bankScrap,
+            purchasedUpgrades: save.purchasedUpgrades,
+            unlockedLevels: { 1: save.unlockedLevels['1'], 2: save.unlockedLevels['2'] },
+            selectedLevelId: save.selectedLevelId,
+            upgradeTreeViewport: save.upgradeTreeViewport
+        })),
 
     addMinerals: (amount) =>
         set((s) => (s.run ? { run: { ...s.run, minerals: s.run.minerals + amount } } : s)),
@@ -160,7 +196,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             return { run: { ...s.run, shield: shieldAfter, hp: hpAfter } };
         });
         const run = get().run;
-        if (run && run.hp <= 0) get().endRunToMenu();
+        if (run && run.hp <= 0) {
+            audio.playShipDead();
+            get().endRunToMenu();
+        }
     },
 
     consumeFuel: (amount) => {
@@ -195,7 +234,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
     },
 
-    purchaseUpgrade: (id) => {
+    purchaseUpgrade: (id: UpgradeId) => {
         const { bankMinerals, purchasedUpgrades } = get();
         const check = canPurchaseUpgrade({ id, minerals: bankMinerals, purchased: purchasedUpgrades });
         if (!check.ok) return check;
@@ -209,6 +248,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             purchasedUpgrades: { ...s.purchasedUpgrades, [id]: current + 1 }
         }));
 
+        autosaveProgress(get);
         return { ok: true };
     },
 

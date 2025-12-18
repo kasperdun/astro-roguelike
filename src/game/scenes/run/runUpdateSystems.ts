@@ -3,23 +3,33 @@ import { GAME_CONFIG } from '../../../config/gameConfig';
 import { flashAsteroid } from './runEffects';
 import { applyBulletImpulseToAsteroid } from './runAsteroidImpulse';
 import { circleHit, wrap } from './runMath';
-import type { Asteroid, Bullet, Pickup } from './runTypes';
+import type { Asteroid, Pickup, Projectile } from './runTypes';
 
-export function updateBullets(args: { bullets: Bullet[]; world: Container; dt: number; width: number; height: number }) {
-  const { bullets, world, dt, width, height } = args;
-  for (let i = bullets.length - 1; i >= 0; i--) {
-    const b = bullets[i];
-    if (!b) continue;
-    b.life -= dt;
-    if (b.life <= 0) {
-      world.removeChild(b.g);
-      bullets.splice(i, 1);
+export function updateProjectiles(args: {
+  projectiles: Projectile[];
+  world: Container;
+  dt: number;
+  width: number;
+  height: number;
+}) {
+  const { projectiles, world, dt, width, height } = args;
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i];
+    if (!p) continue;
+    p.life -= dt;
+    if (p.life <= 0) {
+      world.removeChild(p.g);
+      projectiles.splice(i, 1);
       continue;
     }
-    b.g.x += b.vx * dt;
-    b.g.y += b.vy * dt;
-    wrap(b.g, width, height, b.r);
+    p.g.x += p.vx * dt;
+    p.g.y += p.vy * dt;
+    wrap(p.g, width, height, p.r);
   }
+}
+
+export function updateBullets(args: { bullets: Projectile[]; world: Container; dt: number; width: number; height: number }) {
+  updateProjectiles({ projectiles: args.bullets, world: args.world, dt: args.dt, width: args.width, height: args.height });
 }
 
 export function updateAsteroids(args: { asteroids: Asteroid[]; dt: number; width: number; height: number }) {
@@ -41,8 +51,9 @@ export function updatePickups(args: {
   shipY: number;
   onCollectMinerals: (amount: number) => void;
   onCollectScrap: (amount: number) => void;
+  onCollect?: (pickup: Pickup) => void;
 }) {
-  const { pickups, world, dt, width, height, shipX, shipY, onCollectMinerals, onCollectScrap } = args;
+  const { pickups, world, dt, width, height, shipX, shipY, onCollectMinerals, onCollectScrap, onCollect } = args;
 
   for (let i = pickups.length - 1; i >= 0; i--) {
     const p = pickups[i];
@@ -54,6 +65,7 @@ export function updatePickups(args: {
     if (d <= GAME_CONFIG.shipCollisionRadiusPx + p.r + 2) {
       if (p.kind === 'minerals') onCollectMinerals(p.amount);
       else onCollectScrap(p.amount);
+      onCollect?.(p);
       world.removeChild(p.g);
       pickups.splice(i, 1);
       continue;
@@ -77,13 +89,14 @@ export function updatePickups(args: {
 }
 
 export function resolveBulletAsteroidCollisions(args: {
-  bullets: Bullet[];
+  bullets: Projectile[];
   asteroids: Asteroid[];
   world: Container;
   bulletDamage: number;
+  onBulletHit?: () => void;
   onAsteroidDestroyed: (index: number) => void;
 }) {
-  const { bullets, asteroids, world, bulletDamage, onAsteroidDestroyed } = args;
+  const { bullets, asteroids, world, bulletDamage, onAsteroidDestroyed, onBulletHit } = args;
 
   for (let bi = bullets.length - 1; bi >= 0; bi--) {
     const b = bullets[bi];
@@ -101,6 +114,7 @@ export function resolveBulletAsteroidCollisions(args: {
 
       a.hp -= bulletDamage;
       flashAsteroid(a.g);
+      onBulletHit?.();
 
       // "Soft" kinetic response.
       applyBulletImpulseToAsteroid({ asteroid: a, bulletVx: b.vx, bulletVy: b.vy });

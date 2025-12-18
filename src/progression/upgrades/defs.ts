@@ -13,7 +13,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 0, row: 0 },
         maxLevel: 5,
         requires: [],
-        baseCostMinerals: 10,
+        baseCostMinerals: 5,
         costGrowth: 1.45,
         perLevel: { bulletDamageBonus: 5 }
     },

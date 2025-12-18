@@ -17,7 +17,8 @@ import type { Layout, NodeUiState, TooltipState } from './upgradeTreeTypes';
 import { StatsPanel } from './ui/StatsPanel';
 import { Tooltip } from './ui/Tooltip';
 import { UpgradeIconSvg } from './ui/UpgradeIconSvg';
-import { buildTooltipText, renderPurchaseMessage } from './utils/tooltipText';
+import { buildTooltipText } from './utils/tooltipText';
+import { audio } from '../../../../audio/audio';
 
 export function UpgradeTreeView() {
     const bankMinerals = useGameStore((s) => s.bankMinerals);
@@ -42,7 +43,6 @@ export function UpgradeTreeView() {
 
     const tryPurchase = (id: UpgradeId) => {
         const res = purchaseUpgrade(id);
-        setLastMsg(renderPurchaseMessage(res));
     };
 
     const base = useMemo(() => getRunBaseStats(), []);
@@ -209,6 +209,7 @@ export function UpgradeTreeView() {
                                     aria-disabled={!isClickable}
                                     onClick={() => {
                                         if (!isClickable) return;
+                                        audio.playMenuClick();
                                         tryPurchase(u.id);
                                     }}
                                     style={{

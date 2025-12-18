@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useGameStore } from '../state/gameStore';
 import { createGameHost, type GameHost } from '../game/core/GameHost';
 import { MenuOverlay } from './menu/MenuOverlay';
+import { audio } from '../audio/audio';
+import { loadSave } from '../persistence/save';
 
 export function AppShell() {
   const mode = useGameStore((s) => s.mode);
@@ -21,6 +23,18 @@ export function AppShell() {
   }, [host]);
 
   useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const save = await loadSave();
+      if (cancelled) return;
+      useGameStore.getState().hydrateFromSave(save);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (mode === 'run' && runLevelId) {
       host.startRun(runLevelId);
     }
@@ -28,6 +42,11 @@ export function AppShell() {
       host.showMenuBackground();
     }
   }, [host, mode, runLevelId]);
+
+  useEffect(() => {
+    audio.setBackgroundMusic(mode === 'menu' ? 'menu' : 'run');
+    return () => audio.stopAll();
+  }, [mode]);
 
   return (
     <div

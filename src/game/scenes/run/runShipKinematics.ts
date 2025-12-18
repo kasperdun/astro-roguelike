@@ -11,13 +11,16 @@ export function advanceShipKinematics(args: {
   dt: number;
   stats: { shipAccelPxPerSec2: number; shipMaxSpeedPxPerSec: number };
   bounds: { width: number; height: number };
-}): { vx: number; vy: number } {
+}): { vx: number; vy: number; aimRad: number } {
   const { ship, pointer, input, dt, stats, bounds } = args;
 
   // aim: rotate ship towards cursor
   const dxAim = pointer.x - ship.x;
   const dyAim = pointer.y - ship.y;
-  ship.rotation = Math.atan2(dyAim, dxAim);
+  const aimRad = Math.atan2(dyAim, dxAim);
+  // The ship sprite is drawn "nose up", while math angle 0 points to the right.
+  // In Pixi's screen coords (Y down), positive rotation is clockwise, so +90° aligns up->right.
+  ship.rotation = aimRad + Math.PI / 2;
 
   // ship movement (WASD -> acceleration with inertia)
   const axRaw = (input.d ? 1 : 0) - (input.a ? 1 : 0);
@@ -50,7 +53,7 @@ export function advanceShipKinematics(args: {
   ship.y += vy * dt;
   wrap(ship, bounds.width, bounds.height, GAME_CONFIG.shipCollisionRadiusPx);
 
-  return { vx, vy };
+  return { vx, vy, aimRad };
 }
 
 

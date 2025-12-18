@@ -1,19 +1,33 @@
-import type { Graphics } from 'pixi.js';
+import type { Container, Graphics } from 'pixi.js';
+
+export type Projectile = {
+  g: Graphics;
+  vx: number;
+  vy: number;
+  r: number;
+  life: number;
+};
 
 export type Asteroid = {
-  g: Graphics;
+  g: Container;
   vx: number;
   vy: number;
   r: number;
   hp: number;
 };
 
-export type Bullet = {
+export type Bullet = Projectile;
+export type EnemyBullet = Projectile;
+
+export type Enemy = {
   g: Graphics;
   vx: number;
   vy: number;
   r: number;
-  life: number;
+  hp: number;
+  fireCooldownLeft: number;
+  /** Stable per-enemy seed used to diversify movement/aim patterns. */
+  seed: number;
 };
 
 export type PickupKind = 'minerals' | 'scrap';

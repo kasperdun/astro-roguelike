@@ -3,7 +3,7 @@ import type { Layout, Vec2, Viewport } from '../upgradeTreeTypes';
 import { clamp } from '../utils/math';
 import type { UpgradeId } from '../../../../../progression/upgrades';
 
-type DragState = { lastClient: Vec2 };
+type DragState = { pointerId: number; lastClient: Vec2 };
 
 export function useUpgradeTreeViewport(args: {
     wrapRef: RefObject<HTMLDivElement | null>;
@@ -15,7 +15,11 @@ export function useUpgradeTreeViewport(args: {
 
     const [viewport, setViewport] = useState<Viewport>(savedViewport ?? { tx: 0, ty: 0, scale: 1 });
     const viewportRef = useRef<Viewport>(savedViewport ?? { tx: 0, ty: 0, scale: 1 });
-    const [drag, setDrag] = useState<DragState | null>(null);
+
+    // Pointer move events can arrive faster than React renders. If we store drag state in useState,
+    // the handler can observe stale `drag.lastClient`, causing accumulated deltas (jerky + "too fast" pan).
+    // Keep drag state in a ref so it's updated synchronously per event.
+    const dragRef = useRef<DragState | null>(null);
 
     // If we already have a saved camera, restore it (e.g. after leaving the run back to menu).
     useEffect(() => {
@@ -113,21 +117,25 @@ export function useUpgradeTreeViewport(args: {
         if (e.button !== 0 && e.button !== 2) return;
         e.preventDefault();
         (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-        setDrag({ lastClient: { x: e.clientX, y: e.clientY } });
+        dragRef.current = { pointerId: e.pointerId, lastClient: { x: e.clientX, y: e.clientY } };
     };
 
     const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+        const drag = dragRef.current;
         if (!drag) return;
+        if (e.pointerId !== drag.pointerId) return;
         e.preventDefault();
         const next = { x: e.clientX, y: e.clientY };
         const dx = next.x - drag.lastClient.x;
         const dy = next.y - drag.lastClient.y;
-        setDrag({ lastClient: next });
+        drag.lastClient = next;
         const v = viewportRef.current;
         commitViewport({ ...v, tx: v.tx + dx, ty: v.ty + dy });
     };
 
-    const onPointerUpOrCancel = () => setDrag(null);
+    const onPointerUpOrCancel = () => {
+        dragRef.current = null;
+    };
 
     return {
         viewport,
