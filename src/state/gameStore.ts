@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { GAME_CONFIG } from '../config/gameConfig';
 import {
     canPurchaseUpgrade,
     deriveRunStats,
@@ -9,6 +8,7 @@ import {
     type PurchasedUpgrades,
     type UpgradeId
 } from '../progression/upgrades';
+import { getRunBaseStats } from './runBaseStats';
 
 export type GameMode = 'menu' | 'run';
 
@@ -96,20 +96,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     startRun: () => {
         const { selectedLevelId, purchasedUpgrades } = get();
         const derived = deriveRunStats({
-            base: {
-                startHp: GAME_CONFIG.shipStartHp,
-                startFuel: GAME_CONFIG.shipStartFuel,
-                bulletDamage: GAME_CONFIG.bulletDamage,
-                bulletLifetimeSec: GAME_CONFIG.bulletLifetimeSec,
-                bulletSpeedPxPerSec: GAME_CONFIG.bulletSpeedPxPerSec,
-                weaponFireRatePerSec: GAME_CONFIG.weaponFireRatePerSec,
-                shipAccelPxPerSec2: GAME_CONFIG.shipAccelPxPerSec2,
-                shipMaxSpeedPxPerSec: GAME_CONFIG.shipMaxSpeedPxPerSec,
-                fuelDrainPerSec: GAME_CONFIG.fuelDrainPerSec,
-                fuelDrainWhileThrustPerSec: GAME_CONFIG.fuelDrainWhileThrustPerSec,
-                fuelDrainPerShot: GAME_CONFIG.fuelDrainPerShot,
-                shieldRegenDelaySec: 0.7
-            },
+            base: getRunBaseStats(),
             purchased: purchasedUpgrades
         });
         set({
