@@ -6,7 +6,10 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
+  // Apply type-aware linting ONLY to TS/TSX. Otherwise ESLint will try to lint
+  // config JS files with a TS project and fail.
   {
+    files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
         project: ['./tsconfig.json']
@@ -24,7 +27,7 @@ export default tseslint.config(
     }
   },
   {
-    ignores: ['dist/**', 'node_modules/**']
+    ignores: ['dist/**', 'node_modules/**', 'eslint.config.js']
   }
 );
 
