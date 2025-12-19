@@ -13,7 +13,7 @@ export function getPurchasedLevel(purchased: PurchasedUpgrades, id: UpgradeId): 
 export function getUpgradeCostForLevel(id: UpgradeId, level: number): number {
     const u = getUpgrade(id);
     const lvl = Math.max(1, Math.min(u.maxLevel, level));
-    const raw = u.baseCostMinerals * Math.pow(u.costGrowth, lvl - 1);
+    const raw = u.cost.base * Math.pow(u.cost.growth, lvl - 1);
     return Math.max(1, Math.round(raw));
 }
 

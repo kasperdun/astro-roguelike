@@ -11,7 +11,7 @@ export function buildTooltipText(args: {
     availability: UpgradeAvailability;
     purchaseCheck: PurchaseResult;
 }): string {
-    const { node, purchased, availability } = args;
+    const { node, purchased, availability, purchaseCheck } = args;
 
     const lines: string[] = [];
     lines.push(node.title);
@@ -22,12 +22,22 @@ export function buildTooltipText(args: {
     const nextCost = isMaxed ? null : getUpgradeCostForLevel(node.id, purchased + 1);
 
     lines.push(`Level: ${purchased}/${node.maxLevel}`);
+    if (nextCost != null) {
+        const cur = node.cost.currency === 'scrap' ? 'Scrap' : 'Minerals';
+        lines.push(`Next cost: ${nextCost} ${cur}`);
+    }
 
     if (node.requires.length) {
         lines.push(`Requires: ${node.requires.map((r) => `${r.id} (lvl ${r.level})`).join(', ')}`);
     }
     if (availability.kind === 'locked') {
         lines.push(`Missing: ${availability.missing.map((r) => `${r.id} (lvl ${r.level})`).join(', ')}`);
+    }
+
+    if (!purchaseCheck.ok) {
+        if (purchaseCheck.reason === 'not_enough_minerals') lines.push(`Need minerals: ${purchaseCheck.needed} (have ${purchaseCheck.have})`);
+        if (purchaseCheck.reason === 'not_enough_scrap') lines.push(`Need scrap: ${purchaseCheck.needed} (have ${purchaseCheck.have})`);
+        if (purchaseCheck.reason === 'maxed') lines.push('Max level reached.');
     }
 
     return lines.join('\n');

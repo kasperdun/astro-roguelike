@@ -13,8 +13,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 0, row: 0 },
         maxLevel: 5,
         requires: [],
-        baseCostMinerals: 5,
-        costGrowth: 1.45,
+        cost: { currency: 'minerals', base: 5, growth: 1.45 },
         perLevel: { bulletDamageBonus: 5 }
     },
 
@@ -26,8 +25,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: -2, row: -1 },
         maxLevel: 4,
         requires: [{ id: 'weapon_damage', level: 1 }],
-        baseCostMinerals: 14,
-        costGrowth: 1.42,
+        cost: { currency: 'minerals', base: 14, growth: 1.42 },
         perLevel: { bulletLifetimeBonusSec: 0.08 }
     },
     hull_hp: {
@@ -37,8 +35,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 2, row: -1 },
         maxLevel: 5,
         requires: [{ id: 'weapon_damage', level: 1 }],
-        baseCostMinerals: 14,
-        costGrowth: 1.40,
+        cost: { currency: 'minerals', base: 14, growth: 1.4 },
         perLevel: { maxHpBonus: 15 }
     },
     fuel_capacity: {
@@ -48,8 +45,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 0, row: 2 },
         maxLevel: 5,
         requires: [{ id: 'weapon_damage', level: 1 }],
-        baseCostMinerals: 14,
-        costGrowth: 1.40,
+        cost: { currency: 'minerals', base: 14, growth: 1.4 },
         perLevel: { maxFuelBonus: 8 }
     },
     move_speed: {
@@ -59,8 +55,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 0, row: -3 },
         maxLevel: 4,
         requires: [{ id: 'weapon_damage', level: 1 }],
-        baseCostMinerals: 16,
-        costGrowth: 1.43,
+        cost: { currency: 'minerals', base: 16, growth: 1.43 },
         perLevel: { shipMaxSpeedBonusPxPerSec: 12 }
     },
 
@@ -72,8 +67,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: -4, row: -2 },
         maxLevel: 4,
         requires: [{ id: 'bullet_range', level: 1 }],
-        baseCostMinerals: 28,
-        costGrowth: 1.45,
+        cost: { currency: 'minerals', base: 28, growth: 1.45 },
         perLevel: { bulletSpeedBonusPxPerSec: 28 }
     },
     fire_rate: {
@@ -83,9 +77,18 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: -4, row: 0 },
         maxLevel: 5,
         requires: [{ id: 'bullet_range', level: 1 }],
-        baseCostMinerals: 26,
-        costGrowth: 1.47,
+        cost: { currency: 'minerals', base: 26, growth: 1.47 },
         perLevel: { weaponFireRateMult: 0.06 }
+    },
+    projectile_plus1: {
+        title: '+1 Projectile',
+        description: 'Добавляет вторую пулю к каждому выстрелу. Вторая летит параллельно первой со смещением.',
+        icon: 'core',
+        pos: { col: -6, row: -1 },
+        maxLevel: 2,
+        requires: [{ id: 'fire_rate', level: 1 }],
+        cost: { currency: 'scrap', base: 25, growth: 1.0 },
+        perLevel: { projectilesPerShotBonus: 1 }
     },
     damage_boost: {
         title: 'Focused Damage',
@@ -94,8 +97,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: -6, row: 1 },
         maxLevel: 6,
         requires: [{ id: 'fire_rate', level: 2 }],
-        baseCostMinerals: 55,
-        costGrowth: 1.52,
+        cost: { currency: 'minerals', base: 55, growth: 1.52 },
         perLevel: { bulletDamageBonus: 3 }
     },
     marksman_protocol: {
@@ -105,12 +107,21 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: -6, row: -3 },
         maxLevel: 1,
         requires: [{ id: 'bullet_speed', level: 2 }, { id: 'bullet_range', level: 3 }],
-        baseCostMinerals: 90,
-        costGrowth: 1.0,
+        cost: { currency: 'minerals', base: 90, growth: 1.0 },
         perLevel: { bulletLifetimeBonusSec: 0.18, bulletSpeedBonusPxPerSec: 60 }
     },
 
     // Hull/defense branch (short + long)
+    health_drop_chance: {
+        title: 'Health Scavenging',
+        description: 'Шанс выпадения здоровья с астероидов и врагов. +5% за уровень.',
+        icon: 'core',
+        pos: { col: 2, row: -2 },
+        maxLevel: 5,
+        requires: [{ id: 'hull_hp', level: 1 }],
+        cost: { currency: 'minerals', base: 38, growth: 1.5 },
+        perLevel: { healthDropChanceBonus: 0.05 }
+    },
     collision_plating: {
         title: 'Impact Plating',
         description: 'Снижает урон от столкновений.',
@@ -118,8 +129,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 4, row: -2 },
         maxLevel: 4,
         requires: [{ id: 'hull_hp', level: 1 }],
-        baseCostMinerals: 24,
-        costGrowth: 1.44,
+        cost: { currency: 'minerals', base: 24, growth: 1.44 },
         perLevel: { collisionDamageReduction: 0.06 }
     },
     shield_core: {
@@ -129,8 +139,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 4, row: 0 },
         maxLevel: 3,
         requires: [{ id: 'hull_hp', level: 2 }],
-        baseCostMinerals: 32,
-        costGrowth: 1.50,
+        cost: { currency: 'minerals', base: 32, growth: 1.5 },
         perLevel: { maxShieldBonus: 18 }
     },
     shield_regen: {
@@ -140,8 +149,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 6, row: 1 },
         maxLevel: 4,
         requires: [{ id: 'shield_core', level: 1 }],
-        baseCostMinerals: 58,
-        costGrowth: 1.55,
+        cost: { currency: 'minerals', base: 58, growth: 1.55 },
         perLevel: { shieldRegenPerSec: 2.4 }
     },
     shield_delay: {
@@ -151,8 +159,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 6, row: -1 },
         maxLevel: 3,
         requires: [{ id: 'shield_core', level: 1 }],
-        baseCostMinerals: 52,
-        costGrowth: 1.52,
+        cost: { currency: 'minerals', base: 52, growth: 1.52 },
         perLevel: { shieldRegenDelayBonusSec: -0.18 }
     },
     fortress_protocol: {
@@ -162,8 +169,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 8, row: 0 },
         maxLevel: 1,
         requires: [{ id: 'shield_regen', level: 3 }, { id: 'collision_plating', level: 3 }],
-        baseCostMinerals: 160,
-        costGrowth: 1.0,
+        cost: { currency: 'minerals', base: 160, growth: 1.0 },
         perLevel: { maxHpBonus: 35, maxShieldBonus: 25, collisionDamageReduction: 0.08 }
     },
 
@@ -175,8 +181,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: -2, row: 4 },
         maxLevel: 4,
         requires: [{ id: 'fuel_capacity', level: 1 }],
-        baseCostMinerals: 24,
-        costGrowth: 1.46,
+        cost: { currency: 'minerals', base: 24, growth: 1.46 },
         perLevel: { fuelDrainPerSecBonus: -0.10 }
     },
     fuel_thrust_eff: {
@@ -186,8 +191,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 0, row: 5 },
         maxLevel: 4,
         requires: [{ id: 'fuel_capacity', level: 2 }],
-        baseCostMinerals: 30,
-        costGrowth: 1.48,
+        cost: { currency: 'minerals', base: 30, growth: 1.48 },
         perLevel: { fuelDrainWhileThrustPerSecBonus: -0.24 }
     },
     fuel_shot_eff: {
@@ -197,8 +201,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 2, row: 4 },
         maxLevel: 4,
         requires: [{ id: 'fuel_capacity', level: 2 }],
-        baseCostMinerals: 30,
-        costGrowth: 1.48,
+        cost: { currency: 'minerals', base: 30, growth: 1.48 },
         perLevel: { fuelDrainPerShotBonus: -0.02 }
     },
     fuel_regen: {
@@ -208,9 +211,18 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 0, row: 7 },
         maxLevel: 5,
         requires: [{ id: 'fuel_efficiency', level: 2 }],
-        baseCostMinerals: 62,
-        costGrowth: 1.55,
+        cost: { currency: 'minerals', base: 62, growth: 1.55 },
         perLevel: { fuelRegenPerSec: 0.22 }
+    },
+    fuel_drop_chance: {
+        title: 'Fuel Scavenging',
+        description: 'Шанс выпадения топлива с астероидов и врагов. +5% за уровень.',
+        icon: 'core',
+        pos: { col: -1, row: 4 },
+        maxLevel: 5,
+        requires: [{ id: 'fuel_capacity', level: 2 }],
+        cost: { currency: 'minerals', base: 38, growth: 1.5 },
+        perLevel: { fuelDropChanceBonus: 0.05 }
     },
 
     // Movement branch
@@ -221,8 +233,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 2, row: -5 },
         maxLevel: 4,
         requires: [{ id: 'move_speed', level: 1 }],
-        baseCostMinerals: 26,
-        costGrowth: 1.46,
+        cost: { currency: 'minerals', base: 26, growth: 1.46 },
         perLevel: { shipAccelMult: 0.08 }
     },
     drift_tuning: {
@@ -232,8 +243,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: 4, row: -5 },
         maxLevel: 1,
         requires: [{ id: 'accel_control', level: 2 }, { id: 'fuel_thrust_eff', level: 2 }],
-        baseCostMinerals: 110,
-        costGrowth: 1.0,
+        cost: { currency: 'minerals', base: 110, growth: 1.0 },
         perLevel: { shipMaxSpeedBonusPxPerSec: 22, fuelDrainWhileThrustPerSecBonus: -0.35 }
     },
 
@@ -245,8 +255,7 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: -2, row: 1 },
         maxLevel: 6,
         requires: [{ id: 'weapon_damage', level: 1 }],
-        baseCostMinerals: 18,
-        costGrowth: 1.43,
+        cost: { currency: 'minerals', base: 18, growth: 1.43 },
         perLevel: { asteroidMineralYieldBonus: 1 }
     },
     mining_mastery: {
@@ -256,9 +265,59 @@ const UPGRADE_DEFS: UpgradeDefs = {
         pos: { col: -4, row: 2 },
         maxLevel: 1,
         requires: [{ id: 'mining_yield', level: 4 }],
-        baseCostMinerals: 120,
-        costGrowth: 1.0,
+        cost: { currency: 'minerals', base: 120, growth: 1.0 },
         perLevel: { asteroidMineralYieldBonus: 2 }
+    },
+
+    asteroid_spawn_rate: {
+        title: 'Asteroid Magnet',
+        description: 'Ускоряет спавн астероидов (сокращает интервал).',
+        icon: 'core',
+        pos: { col: -4, row: 0 },
+        maxLevel: 4,
+        requires: [{ id: 'mining_yield', level: 2 }],
+        cost: { currency: 'minerals', base: 42, growth: 1.48 },
+        perLevel: { asteroidSpawnIntervalReduction: 0.08 }
+    },
+    asteroid_max_count: {
+        title: 'Dense Field',
+        description: 'Увеличивает максимальное количество астероидов одновременно.',
+        icon: 'core',
+        pos: { col: -6, row: 3 },
+        maxLevel: 3,
+        requires: [{ id: 'asteroid_spawn_rate', level: 2 }],
+        cost: { currency: 'minerals', base: 64, growth: 1.5 },
+        perLevel: { asteroidsMaxCountBonus: 1 }
+    },
+    asteroid_explosion_damage: {
+        title: 'Volatile Core',
+        description: 'Астероиды начинают наносить AOE-урон при взрыве (база: 0).',
+        icon: 'core',
+        pos: { col: -8, row: 4 },
+        maxLevel: 4,
+        requires: [{ id: 'asteroid_max_count', level: 1 }],
+        cost: { currency: 'minerals', base: 78, growth: 1.52 },
+        perLevel: { asteroidExplosionDamageBonus: 18 }
+    },
+    asteroid_explosion_radius: {
+        title: 'Blast Radius',
+        description: 'Увеличивает радиус AOE-урона от взрыва астероида.',
+        icon: 'core',
+        pos: { col: -8, row: 6 },
+        maxLevel: 4,
+        requires: [{ id: 'asteroid_explosion_damage', level: 1 }],
+        cost: { currency: 'minerals', base: 62, growth: 1.45 },
+        perLevel: { asteroidExplosionRadiusBonusPx: 10 }
+    },
+    enemy_resource_yield: {
+        title: 'Salvage Protocol',
+        description: 'Больше ресурсов с вражеских кораблей (минералы).',
+        icon: 'core',
+        pos: { col: -2, row: 3 },
+        maxLevel: 5,
+        requires: [{ id: 'mining_yield', level: 2 }],
+        cost: { currency: 'minerals', base: 34, growth: 1.47 },
+        perLevel: { enemyMineralYieldBonus: 1 }
     }
 };
 

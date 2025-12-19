@@ -3,6 +3,7 @@ import {
     canPurchaseUpgrade,
     deriveRunStats,
     getPurchasedLevel,
+    getUpgrade,
     getUpgradeCostForLevel,
     type PurchaseResult,
     type PurchasedUpgrades,
@@ -27,6 +28,7 @@ export type RunSession = {
     shield: number;
     maxShield: number;
     stats: {
+        projectilesPerShot: number;
         bulletDamage: number;
         bulletLifetimeSec: number;
         bulletSpeedPxPerSec: number;
@@ -40,6 +42,10 @@ export type RunSession = {
         shieldRegenPerSec: number;
         shieldRegenDelaySec: number;
         collisionDamageMultiplier: number;
+        asteroidsSpawnIntervalSec: number;
+        asteroidsMaxCount: number;
+        asteroidExplosionDamage: number;
+        asteroidExplosionRadiusBonusPx: number;
     };
     minerals: number;
     scrap: number;
@@ -78,6 +84,7 @@ type GameState = {
     consumeFuel: (amount: number) => void;
     addFuel: (amount: number) => void;
     addShield: (amount: number) => void;
+    addHealth: (amount: number) => void;
 
     purchaseUpgrade: (id: UpgradeId) => PurchaseResult;
 
@@ -132,6 +139,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 shield: derived.maxShield,
                 maxShield: derived.maxShield,
                 stats: {
+                    projectilesPerShot: derived.projectilesPerShot,
                     bulletDamage: derived.bulletDamage,
                     bulletLifetimeSec: derived.bulletLifetimeSec,
                     bulletSpeedPxPerSec: derived.bulletSpeedPxPerSec,
@@ -144,7 +152,11 @@ export const useGameStore = create<GameState>((set, get) => ({
                     fuelRegenPerSec: derived.fuelRegenPerSec,
                     shieldRegenPerSec: derived.shieldRegenPerSec,
                     shieldRegenDelaySec: derived.shieldRegenDelaySec,
-                    collisionDamageMultiplier: derived.collisionDamageMultiplier
+                    collisionDamageMultiplier: derived.collisionDamageMultiplier,
+                    asteroidsSpawnIntervalSec: derived.asteroidsSpawnIntervalSec,
+                    asteroidsMaxCount: derived.asteroidsMaxCount,
+                    asteroidExplosionDamage: derived.asteroidExplosionDamage,
+                    asteroidExplosionRadiusBonusPx: derived.asteroidExplosionRadiusBonusPx
                 },
                 minerals: 0,
                 scrap: 0
@@ -223,6 +235,15 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
     },
 
+    addHealth: (amount) => {
+        if (amount <= 0) return;
+        set((s) => {
+            if (!s.run) return s;
+            const health = Math.max(0, Math.min(s.run.maxHp, s.run.hp + amount));
+            return { run: { ...s.run, hp: health } };
+        });
+    },
+
     addShield: (amount) => {
         if (amount <= 0) return;
         set((s) => {
@@ -235,18 +256,21 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     purchaseUpgrade: (id: UpgradeId) => {
-        const { bankMinerals, purchasedUpgrades } = get();
-        const check = canPurchaseUpgrade({ id, minerals: bankMinerals, purchased: purchasedUpgrades });
+        const { bankMinerals, bankScrap, purchasedUpgrades } = get();
+        const check = canPurchaseUpgrade({ id, minerals: bankMinerals, scrap: bankScrap, purchased: purchasedUpgrades });
         if (!check.ok) return check;
 
         // canPurchaseUpgrade already validated; safe to compute the next cost.
         const current = getPurchasedLevel(purchasedUpgrades, id);
         const cost = getUpgradeCostForLevel(id, current + 1);
+        const currency = getUpgrade(id).cost.currency;
 
-        set((s) => ({
-            bankMinerals: s.bankMinerals - cost,
-            purchasedUpgrades: { ...s.purchasedUpgrades, [id]: current + 1 }
-        }));
+        set((s) => {
+            const nextPurchased = { ...s.purchasedUpgrades, [id]: current + 1 };
+            return currency === 'minerals'
+                ? { bankMinerals: s.bankMinerals - cost, purchasedUpgrades: nextPurchased }
+                : { bankScrap: s.bankScrap - cost, purchasedUpgrades: nextPurchased };
+        });
 
         autosaveProgress(get);
         return { ok: true };

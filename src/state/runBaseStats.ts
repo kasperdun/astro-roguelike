@@ -3,6 +3,9 @@ import { GAME_CONFIG } from '../config/gameConfig';
 export type RunBaseStats = {
     startHp: number;
     startFuel: number;
+    asteroidsSpawnIntervalSec: number;
+    asteroidsMaxCount: number;
+    asteroidExplosionDamage: number;
     bulletDamage: number;
     bulletLifetimeSec: number;
     bulletSpeedPxPerSec: number;
@@ -19,6 +22,9 @@ export function getRunBaseStats(): RunBaseStats {
     return {
         startHp: GAME_CONFIG.shipStartHp,
         startFuel: GAME_CONFIG.shipStartFuel,
+        asteroidsSpawnIntervalSec: GAME_CONFIG.asteroidsSpawnIntervalSec,
+        asteroidsMaxCount: GAME_CONFIG.asteroidsMaxCount,
+        asteroidExplosionDamage: 0,
         bulletDamage: GAME_CONFIG.bulletDamage,
         bulletLifetimeSec: GAME_CONFIG.bulletLifetimeSec,
         bulletSpeedPxPerSec: GAME_CONFIG.bulletSpeedPxPerSec,

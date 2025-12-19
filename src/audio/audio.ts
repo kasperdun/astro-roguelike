@@ -1,5 +1,5 @@
 type MusicKind = 'menu' | 'run';
-type SfxKind = 'click' | 'laser' | 'warp' | 'hit' | 'ship_dead' | 'asteroid_dead';
+type SfxKind = 'click' | 'laser' | 'warp' | 'hit' | 'ship_dead' | 'asteroid_dead' | 'enemy_shoot';
 
 function assetUrl(relativeToThisFile: string): string {
     // Vite will rewrite this into a hashed asset URL.
@@ -17,7 +17,8 @@ const SFX_URL: Record<SfxKind, string> = {
     warp: assetUrl('../../assets/sounds/underwater world.ogg'),
     hit: assetUrl('../../assets/sounds/Hit.ogg'),
     ship_dead: assetUrl('../../assets/sounds/dead.ogg'),
-    asteroid_dead: assetUrl('../../assets/sounds/Asteroid dead.wav')
+    asteroid_dead: assetUrl('../../assets/sounds/Asteroid dead.wav'),
+    enemy_shoot: assetUrl('../../assets/sounds/enemy shoot.ogg')
 };
 
 const DEFAULT_MUSIC_VOLUME: Record<MusicKind, number> = {
@@ -31,7 +32,8 @@ const DEFAULT_SFX_VOLUME: Record<SfxKind, number> = {
     warp: 0.65,
     hit: 0.25,
     ship_dead: 0.45,
-    asteroid_dead: 0.45
+    asteroid_dead: 0.45,
+    enemy_shoot: 0.25
 };
 
 const SFX_MIN_INTERVAL_MS: Record<SfxKind, number> = {
@@ -40,7 +42,8 @@ const SFX_MIN_INTERVAL_MS: Record<SfxKind, number> = {
     warp: 250,
     hit: 22,
     ship_dead: 500,
-    asteroid_dead: 35
+    asteroid_dead: 35,
+    enemy_shoot: 28
 };
 
 class AudioManager {
@@ -99,6 +102,11 @@ class AudioManager {
     public playAsteroidDead() {
         this.markUserGesture();
         this.playSfx('asteroid_dead');
+    }
+
+    public playEnemyShoot() {
+        this.markUserGesture();
+        this.playSfx('enemy_shoot');
     }
 
     public playPickupPop() {
@@ -219,7 +227,8 @@ class AudioManager {
             laser: 10,
             hit: 8,
             ship_dead: 2,
-            asteroid_dead: 6
+            asteroid_dead: 6,
+            enemy_shoot: 10
         };
         const max = kind ? MAX_PER_KIND[kind] : 4;
         if (pool.length >= max) return null;

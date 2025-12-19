@@ -18,6 +18,9 @@ export function deriveRunStats(args: {
     base: {
         startHp: number;
         startFuel: number;
+        asteroidsSpawnIntervalSec: number;
+        asteroidsMaxCount: number;
+        asteroidExplosionDamage: number;
         bulletDamage: number;
         bulletLifetimeSec: number;
         bulletSpeedPxPerSec: number;
@@ -44,6 +47,8 @@ export function deriveRunStats(args: {
     const maxHp = base.startHp + (eff.maxHpBonus ?? 0);
     const maxFuel = base.startFuel + (eff.maxFuelBonus ?? 0);
 
+    const projectilesPerShot = Math.max(1, 1 + Math.floor(Math.max(0, eff.projectilesPerShotBonus ?? 0)));
+
     const bulletDamage = base.bulletDamage + (eff.bulletDamageBonus ?? 0);
     const bulletLifetimeSec = Math.max(0.1, base.bulletLifetimeSec + (eff.bulletLifetimeBonusSec ?? 0));
     const bulletSpeedPxPerSec = Math.max(60, base.bulletSpeedPxPerSec + (eff.bulletSpeedBonusPxPerSec ?? 0));
@@ -57,14 +62,26 @@ export function deriveRunStats(args: {
     const fuelDrainPerShot = Math.max(0, base.fuelDrainPerShot + (eff.fuelDrainPerShotBonus ?? 0));
     const fuelRegenPerSec = Math.max(0, eff.fuelRegenPerSec ?? 0);
 
+    const fuelDropChance = Math.max(0, Math.min(0.95, eff.fuelDropChanceBonus ?? 0));
+
+    const healthDropChance = Math.max(0, Math.min(0.95, eff.healthDropChanceBonus ?? 0));
+
     const maxShield = Math.max(0, eff.maxShieldBonus ?? 0);
     const shieldRegenPerSec = Math.max(0, eff.shieldRegenPerSec ?? 0);
     const shieldRegenDelaySec = Math.max(0, base.shieldRegenDelaySec + (eff.shieldRegenDelayBonusSec ?? 0));
 
     const asteroidMineralYieldBonus = Math.max(0, eff.asteroidMineralYieldBonus ?? 0);
+    const enemyMineralYieldBonus = Math.max(0, eff.enemyMineralYieldBonus ?? 0);
 
     const collisionDamageReduction = Math.max(0, Math.min(0.9, eff.collisionDamageReduction ?? 0));
     const collisionDamageMultiplier = 1 - collisionDamageReduction;
+
+    const spawnReduction = Math.max(0, Math.min(0.85, eff.asteroidSpawnIntervalReduction ?? 0));
+    const asteroidsSpawnIntervalSec = Math.max(0.45, base.asteroidsSpawnIntervalSec * (1 - spawnReduction));
+    const asteroidsMaxCount = Math.max(1, base.asteroidsMaxCount + Math.floor(Math.max(0, eff.asteroidsMaxCountBonus ?? 0)));
+
+    const asteroidExplosionDamage = Math.max(0, base.asteroidExplosionDamage + (eff.asteroidExplosionDamageBonus ?? 0));
+    const asteroidExplosionRadiusBonusPx = Math.max(0, eff.asteroidExplosionRadiusBonusPx ?? 0);
 
     return {
         startHp: maxHp,
@@ -72,6 +89,7 @@ export function deriveRunStats(args: {
         maxHp,
         maxFuel,
 
+        projectilesPerShot,
         bulletDamage,
         bulletLifetimeSec,
         bulletSpeedPxPerSec,
@@ -89,7 +107,14 @@ export function deriveRunStats(args: {
         shieldRegenDelaySec,
 
         asteroidMineralYieldBonus,
-        collisionDamageMultiplier
+        enemyMineralYieldBonus,
+        fuelDropChance,
+        healthDropChance,
+        collisionDamageMultiplier,
+        asteroidsSpawnIntervalSec,
+        asteroidsMaxCount,
+        asteroidExplosionDamage,
+        asteroidExplosionRadiusBonusPx
     };
 }
 
@@ -99,6 +124,9 @@ export function deriveShipStartStats(base: ShipStartStats, purchased: PurchasedU
         base: {
             startHp: base.startHp,
             startFuel: base.startFuel,
+            asteroidsSpawnIntervalSec: 1,
+            asteroidsMaxCount: 1,
+            asteroidExplosionDamage: 0,
             bulletDamage: 0,
             bulletLifetimeSec: 1,
             bulletSpeedPxPerSec: 1,
@@ -121,6 +149,9 @@ export function deriveEconomyStats(purchased: PurchasedUpgrades): EconomyStats {
         base: {
             startHp: 0,
             startFuel: 0,
+            asteroidsSpawnIntervalSec: 1,
+            asteroidsMaxCount: 1,
+            asteroidExplosionDamage: 0,
             bulletDamage: 0,
             bulletLifetimeSec: 1,
             bulletSpeedPxPerSec: 1,
@@ -134,7 +165,12 @@ export function deriveEconomyStats(purchased: PurchasedUpgrades): EconomyStats {
         },
         purchased
     });
-    return { asteroidMineralYieldBonus: stats.asteroidMineralYieldBonus };
+    return {
+        asteroidMineralYieldBonus: stats.asteroidMineralYieldBonus,
+        enemyMineralYieldBonus: stats.enemyMineralYieldBonus,
+        fuelDropChance: stats.fuelDropChance,
+        healthDropChance: stats.healthDropChance
+    };
 }
 
 

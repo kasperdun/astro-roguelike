@@ -22,6 +22,7 @@ import { audio } from '../../../../audio/audio';
 
 export function UpgradeTreeView() {
     const bankMinerals = useGameStore((s) => s.bankMinerals);
+    const bankScrap = useGameStore((s) => s.bankScrap);
     const purchasedUpgrades = useGameStore((s) => s.purchasedUpgrades);
     const purchaseUpgrade = useGameStore((s) => s.purchaseUpgrade);
     const savedViewport = useGameStore((s) => s.upgradeTreeViewport);
@@ -29,7 +30,6 @@ export function UpgradeTreeView() {
 
     const wrapRef = useRef<HTMLDivElement | null>(null);
     const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-    const [lastMsg, setLastMsg] = useState<string | null>(null);
 
     // Depend on UPGRADES so layout is recalculated on HMR / tree changes.
     const layout: Layout = useMemo(() => buildUpgradeTreeLayout(UPGRADES), [UPGRADES]);
@@ -62,23 +62,11 @@ export function UpgradeTreeView() {
                 <div style={{ fontSize: 18, fontWeight: 800 }}>Upgrades</div>
                 <div style={{ fontSize: 12, opacity: 0.85 }}>
                     Minerals: <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{bankMinerals}</span>
+                    <span style={{ marginLeft: 10 }}>
+                        Scrap: <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{bankScrap}</span>
+                    </span>
                 </div>
             </div>
-
-            {lastMsg ? (
-                <div
-                    style={{
-                        border: '1px solid rgba(255,255,255,0.12)',
-                        background: 'rgba(0,0,0,0.25)',
-                        borderRadius: 12,
-                        padding: '10px 12px',
-                        fontSize: 12,
-                        opacity: 0.9
-                    }}
-                >
-                    {lastMsg}
-                </div>
-            ) : null}
 
             <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
                 <div
@@ -148,6 +136,7 @@ export function UpgradeTreeView() {
                             const purchaseCheck = canPurchaseUpgrade({
                                 purchased: purchasedUpgrades,
                                 minerals: bankMinerals,
+                                scrap: bankScrap,
                                 id: u.id
                             });
 
@@ -232,7 +221,9 @@ export function UpgradeTreeView() {
                                     <div style={{ display: 'grid', placeItems: 'center', gap: 6 }}>
                                         <UpgradeIconSvg icon={u.icon} />
                                         <div style={{ fontSize: 10, fontWeight: 800, lineHeight: 1, textAlign: 'center' }}>
-                                            {isMaxed ? 'MAX' : getUpgradeCostForLevel(u.id, level + 1)}
+                                            {isMaxed
+                                                ? 'MAX'
+                                                : `${getUpgradeCostForLevel(u.id, level + 1)} ${u.cost.currency === 'scrap' ? 'S' : 'M'}`}
                                         </div>
                                     </div>
                                 </button>
@@ -247,7 +238,12 @@ export function UpgradeTreeView() {
                             content={buildTooltipText({
                                 node: getUpgrade(tooltip.nodeId),
                                 purchased: getPurchasedLevel(purchasedUpgrades, tooltip.nodeId),
-                                purchaseCheck: canPurchaseUpgrade({ purchased: purchasedUpgrades, minerals: bankMinerals, id: tooltip.nodeId }),
+                                purchaseCheck: canPurchaseUpgrade({
+                                    purchased: purchasedUpgrades,
+                                    minerals: bankMinerals,
+                                    scrap: bankScrap,
+                                    id: tooltip.nodeId
+                                }),
                                 availability: getUpgradeAvailability(purchasedUpgrades, tooltip.nodeId)
                             })}
                         />

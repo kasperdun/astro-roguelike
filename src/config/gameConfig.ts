@@ -59,6 +59,9 @@ export const GAME_CONFIG = {
     /** Смещение точки вылета пули от центра корабля (px). */
     bulletMuzzleOffsetPx: 18,
 
+    /** Боковое смещение для параллельных пуль при multi-shot (px). */
+    bulletParallelOffsetPx: 12,
+
     /** Максимум астероидов одновременно (ограничение производительности). */
     asteroidsMaxCount: 8,
 
@@ -94,6 +97,15 @@ export const GAME_CONFIG = {
 
     /** Сколько скрапа выпадает (если выпал). */
     asteroidDropScrapAmount: 1,
+
+    /** Сколько топлива даёт один fuel-pickup. */
+    fuelPickupAmount: 6,
+
+    /** Сколько здоровья даёт один health-pickup. */
+    healthPickupAmount: 10,
+
+    /** Базовый множитель радиуса AOE-взрыва астероида относительно его радиуса. */
+    asteroidExplosionRadiusFromAsteroidMult: 1.35,
 
     /** Радиус “магнита” подбора лута (px). Внутри радиуса лут тянется к кораблю. */
     pickupMagnetRadiusPx: 40,
