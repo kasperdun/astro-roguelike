@@ -7,9 +7,10 @@ export function canPurchaseUpgrade(args: {
     purchased: PurchasedUpgrades;
     minerals: number;
     scrap: number;
+    cores: number;
     id: UpgradeId;
 }): PurchaseResult {
-    const { purchased, minerals, scrap, id } = args;
+    const { purchased, minerals, scrap, cores, id } = args;
     const u = getUpgrade(id);
     const current = getPurchasedLevel(purchased, id);
 
@@ -22,8 +23,10 @@ export function canPurchaseUpgrade(args: {
     const cost = getUpgradeCostForLevel(id, nextLevel);
     if (u.cost.currency === 'minerals') {
         if (minerals < cost) return { ok: false, reason: 'not_enough_minerals', needed: cost, have: minerals };
-    } else {
+    } else if (u.cost.currency === 'scrap') {
         if (scrap < cost) return { ok: false, reason: 'not_enough_scrap', needed: cost, have: scrap };
+    } else {
+        if (cores < cost) return { ok: false, reason: 'not_enough_cores', needed: cost, have: cores };
     }
 
     return { ok: true };

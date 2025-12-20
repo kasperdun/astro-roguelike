@@ -1,5 +1,5 @@
 import type { PurchasedUpgrades, PurchaseResult, UpgradeId } from '../../progression/upgrades';
-import type { SaveV1 } from '../../persistence/save';
+import type { SaveLatest } from '../../persistence/save';
 
 export type GameMode = 'menu' | 'run';
 export type MenuTabId = 'update' | 'craft' | 'quests';
@@ -37,6 +37,7 @@ export type RunSession = {
     };
     minerals: number;
     scrap: number;
+    cores: number;
 };
 
 export type UpgradeTreeViewport = { tx: number; ty: number; scale: number } | null;
@@ -60,6 +61,8 @@ export type GameState = {
     bankMinerals: number;
     /** Скрап в "банке" (meta-прогресс). Пока не используется (заложено под крафт). */
     bankScrap: number;
+    /** Ядра в "банке" (meta-прогресс). Дропаются с боссов и тратятся на мощные апгрейды. */
+    bankCores: number;
     /** Купленные апгрейды (meta-прогресс). */
     purchasedUpgrades: PurchasedUpgrades;
 
@@ -70,7 +73,7 @@ export type GameState = {
     selectLevel: (levelId: LevelId) => void;
     startRun: () => void;
     endRunToMenu: () => void;
-    hydrateFromSave: (save: SaveV1) => void;
+    hydrateFromSave: (save: SaveLatest) => void;
 
     setMusicEnabled: (enabled: boolean) => void;
     setSfxEnabled: (enabled: boolean) => void;
@@ -81,6 +84,7 @@ export type GameState = {
 
     addMinerals: (amount: number) => void;
     addScrap: (amount: number) => void;
+    addCores: (amount: number) => void;
 
     applyDamageToShip: (amount: number) => void;
     consumeFuel: (amount: number) => void;
@@ -89,6 +93,8 @@ export type GameState = {
     addHealth: (amount: number) => void;
 
     purchaseUpgrade: (id: UpgradeId) => PurchaseResult;
+    /** Победа в ран-уровне (после убийства босса): перенос добычи в банк + unlock следующего уровня. */
+    completeRunVictory: () => void;
 
     setUpgradeTreeViewport: (v: { tx: number; ty: number; scale: number }) => void;
 };

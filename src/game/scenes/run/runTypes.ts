@@ -1,5 +1,6 @@
 import type { Container, Graphics } from 'pixi.js';
 import type { EnemyKind } from '../../enemies/enemyCatalog';
+import type { BossKind } from '../../boss/bossCatalog';
 
 export type Projectile = {
     g: Graphics;
@@ -36,7 +37,24 @@ export type Enemy = {
     seed: number;
 };
 
-export type PickupKind = 'minerals' | 'scrap' | 'fuel' | 'health' | 'magnet';
+export type Boss = {
+    g: Container;
+    kind: BossKind;
+    vx: number;
+    vy: number;
+    r: number;
+    hp: number;
+    maxHp: number;
+    mode: 'aimed' | 'fan' | 'ring';
+    modeTimeLeft: number;
+    burstShotsLeft: number;
+    burstShotTimerLeft: number;
+    aimedCooldownLeft: number;
+    ringTelegraphLeft: number;
+    seed: number;
+};
+
+export type PickupKind = 'minerals' | 'scrap' | 'fuel' | 'health' | 'magnet' | 'core';
 
 export type Pickup = {
     g: Graphics;

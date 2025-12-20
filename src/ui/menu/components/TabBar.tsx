@@ -12,6 +12,7 @@ export function TabBar() {
   const setActiveTab = useGameStore((s) => s.setActiveTab);
   const bankMinerals = useGameStore((s) => s.bankMinerals);
   const bankScrap = useGameStore((s) => s.bankScrap);
+  const bankCores = useGameStore((s) => s.bankCores);
 
   return (
     <div
@@ -53,6 +54,7 @@ export function TabBar() {
         <div style={{ display: 'flex', gap: 10 }}>
           <StatPill label="Minerals" value={bankMinerals} />
           <StatPill label="Scrap" value={bankScrap} />
+          <StatPill label="Cores" value={bankCores} />
         </div>
       </div>
     </div>

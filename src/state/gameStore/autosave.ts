@@ -6,6 +6,7 @@ export function autosaveProgress(get: () => GameState) {
     const save = buildSaveFromState({
         bankMinerals: s.bankMinerals,
         bankScrap: s.bankScrap,
+        bankCores: s.bankCores,
         musicEnabled: s.musicEnabled,
         sfxEnabled: s.sfxEnabled,
         purchasedUpgrades: s.purchasedUpgrades,

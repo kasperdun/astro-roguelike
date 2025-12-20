@@ -2,7 +2,7 @@ import type { UpgradeId } from './ids';
 
 export type UpgradeIcon = 'core';
 
-export type UpgradeCurrency = 'minerals' | 'scrap';
+export type UpgradeCurrency = 'minerals' | 'scrap' | 'core';
 
 export type UpgradeCost = {
     currency: UpgradeCurrency;
@@ -116,7 +116,8 @@ export type PurchaseResult =
     | { ok: false; reason: 'maxed' }
     | { ok: false; reason: 'locked'; missing: Requirement[] }
     | { ok: false; reason: 'not_enough_minerals'; needed: number; have: number }
-    | { ok: false; reason: 'not_enough_scrap'; needed: number; have: number };
+    | { ok: false; reason: 'not_enough_scrap'; needed: number; have: number }
+    | { ok: false; reason: 'not_enough_cores'; needed: number; have: number };
 
 export type ShipStartStats = { startHp: number; startFuel: number };
 

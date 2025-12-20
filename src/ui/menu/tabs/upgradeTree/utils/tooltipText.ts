@@ -23,7 +23,7 @@ export function buildTooltipText(args: {
 
     lines.push(`Level: ${purchased}/${node.maxLevel}`);
     if (nextCost != null) {
-        const cur = node.cost.currency === 'scrap' ? 'Scrap' : 'Minerals';
+        const cur = node.cost.currency === 'scrap' ? 'Scrap' : node.cost.currency === 'core' ? 'Core' : 'Minerals';
         lines.push(`Next cost: ${nextCost} ${cur}`);
     }
 
@@ -37,6 +37,7 @@ export function buildTooltipText(args: {
     if (!purchaseCheck.ok) {
         if (purchaseCheck.reason === 'not_enough_minerals') lines.push(`Need minerals: ${purchaseCheck.needed} (have ${purchaseCheck.have})`);
         if (purchaseCheck.reason === 'not_enough_scrap') lines.push(`Need scrap: ${purchaseCheck.needed} (have ${purchaseCheck.have})`);
+        if (purchaseCheck.reason === 'not_enough_cores') lines.push(`Need cores: ${purchaseCheck.needed} (have ${purchaseCheck.have})`);
         if (purchaseCheck.reason === 'maxed') lines.push('Max level reached.');
     }
 

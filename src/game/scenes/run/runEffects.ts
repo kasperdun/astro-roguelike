@@ -2,6 +2,7 @@ import { gsap } from 'gsap';
 import { AnimatedSprite, Container, Graphics } from 'pixi.js';
 import { preloadRunAssets } from '../../runAssets';
 import type { EnemyKind } from '../../enemies/enemyCatalog';
+import type { BossKind } from '../../boss/bossCatalog';
 import { lerp } from './runMath';
 
 // Start loading early.
@@ -114,6 +115,39 @@ export function spawnEnemyDestruction(parent: Container, args: { x: number; y: n
     // Make the destruction readable: keep ~constant perceived duration across sheets with different frame counts.
     // AnimatedSprite advances `animationSpeed` frames per tick; at 60fps, duration ≈ framesCount / (animationSpeed * 60).
     const desiredDurationSec = 1.05;
+    const fps = 60;
+    const speed = frames.length / Math.max(1, desiredDurationSec * fps);
+    anim.animationSpeed = Math.min(1.0, Math.max(0.12, speed));
+    anim.onComplete = () => {
+      parent.removeChild(anim);
+      anim.destroy();
+    };
+
+    parent.addChild(anim);
+    anim.play();
+  });
+}
+
+export function spawnBossDestruction(parent: Container, args: { x: number; y: number; r: number; kind: BossKind; rotationRad: number }) {
+  spawnExplosion(parent, args.x, args.y, args.r * 1.2);
+
+  void preloadRunAssets().then((assets) => {
+    const frames = assets.boss[args.kind].destructionFrames;
+    if (!frames.length) return;
+
+    const anim = new AnimatedSprite(frames);
+    anim.anchor.set(0.5);
+    anim.x = args.x;
+    anim.y = args.y;
+    anim.rotation = args.rotationRad;
+
+    // Bigger than regular enemies.
+    const size = args.r * 3.4;
+    anim.width = size;
+    anim.height = size;
+
+    anim.loop = false;
+    const desiredDurationSec = 1.25;
     const fps = 60;
     const speed = frames.length / Math.max(1, desiredDurationSec * fps);
     anim.animationSpeed = Math.min(1.0, Math.max(0.12, speed));

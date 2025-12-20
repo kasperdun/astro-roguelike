@@ -54,13 +54,14 @@ export function updatePickups(args: {
     shipY: number;
     onCollectMinerals: (amount: number) => void;
     onCollectScrap: (amount: number) => void;
+    onCollectCores: (amount: number) => void;
     onCollectFuel: (amount: number) => void;
     onCollectHealth: (amount: number) => void;
     onCollect?: (pickup: Pickup) => void;
     magnetRadiusPx?: number;
     magnetAccelPxPerSec2?: number;
 }) {
-    const { pickups, world, dt, width, height, shipX, shipY, onCollectMinerals, onCollectScrap, onCollectFuel, onCollectHealth, onCollect } = args;
+    const { pickups, world, dt, width, height, shipX, shipY, onCollectMinerals, onCollectScrap, onCollectCores, onCollectFuel, onCollectHealth, onCollect } = args;
     const magnetRadiusPx = args.magnetRadiusPx ?? GAME_CONFIG.pickupMagnetRadiusPx;
     const magnetAccelPxPerSec2 = args.magnetAccelPxPerSec2 ?? GAME_CONFIG.pickupMagnetAccelPxPerSec2;
 
@@ -75,6 +76,7 @@ export function updatePickups(args: {
             switch (p.kind) {
                 case 'minerals': onCollectMinerals(p.amount); break;
                 case 'scrap': onCollectScrap(p.amount); break;
+                case 'core': onCollectCores(p.amount); break;
                 case 'fuel': onCollectFuel(p.amount); break;
                 case 'health': onCollectHealth(p.amount); break;
                 case 'magnet': break;

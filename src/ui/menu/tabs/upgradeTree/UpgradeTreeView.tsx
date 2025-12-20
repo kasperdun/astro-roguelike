@@ -23,6 +23,7 @@ import { audio } from '../../../../audio/audio';
 export function UpgradeTreeView() {
     const bankMinerals = useGameStore((s) => s.bankMinerals);
     const bankScrap = useGameStore((s) => s.bankScrap);
+    const bankCores = useGameStore((s) => s.bankCores);
     const purchasedUpgrades = useGameStore((s) => s.purchasedUpgrades);
     const purchaseUpgrade = useGameStore((s) => s.purchaseUpgrade);
     const savedViewport = useGameStore((s) => s.upgradeTreeViewport);
@@ -132,6 +133,7 @@ export function UpgradeTreeView() {
                                 purchased: purchasedUpgrades,
                                 minerals: bankMinerals,
                                 scrap: bankScrap,
+                                cores: bankCores,
                                 id: u.id
                             });
 
@@ -218,7 +220,7 @@ export function UpgradeTreeView() {
                                         <div style={{ fontSize: 10, fontWeight: 800, lineHeight: 1, textAlign: 'center' }}>
                                             {isMaxed
                                                 ? 'MAX'
-                                                : `${getUpgradeCostForLevel(u.id, level + 1)} ${u.cost.currency === 'scrap' ? 'S' : 'M'}`}
+                                                : `${getUpgradeCostForLevel(u.id, level + 1)} ${u.cost.currency === 'scrap' ? 'S' : u.cost.currency === 'core' ? 'C' : 'M'}`}
                                         </div>
                                     </div>
                                 </button>
@@ -237,6 +239,7 @@ export function UpgradeTreeView() {
                                     purchased: purchasedUpgrades,
                                     minerals: bankMinerals,
                                     scrap: bankScrap,
+                                    cores: bankCores,
                                     id: tooltip.nodeId
                                 }),
                                 availability: getUpgradeAvailability(purchasedUpgrades, tooltip.nodeId)

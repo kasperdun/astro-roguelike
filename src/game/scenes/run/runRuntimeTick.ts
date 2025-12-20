@@ -48,6 +48,7 @@ export function tickRun(runtime: RunRuntime, dtRaw: number) {
     runtime.runTimeSec += dt;
     runtime.pickupVacuumLeft = Math.max(0, runtime.pickupVacuumLeft - dt);
     runtime.weapons.tick(dt);
+    runtime.victoryTimerLeft = Math.max(0, runtime.victoryTimerLeft - dt);
 
     // Shield regen (after delay).
     if (run.maxShield > 0 && stats.shieldRegenPerSec > 0 && runtime.shieldRegenBlockedLeft <= 0) {
@@ -77,15 +78,22 @@ export function tickRun(runtime: RunRuntime, dtRaw: number) {
     }
 
     // Spawn enemies over time (accelerates with kill count).
-    runtime.enemySpawnTimerLeft -= dt;
-    if (runtime.enemySpawnTimerLeft <= 0) {
-        if (runtime.enemies.length < GAME_CONFIG.enemiesMaxCount) {
-            runtime.spawnEnemy({ avoidShip: true });
-            runtime.enemySpawnTimerLeft = runtime.computeEnemySpawnIntervalSec();
-        } else {
-            // If capped, retry soon.
-            runtime.enemySpawnTimerLeft = 0.5;
+    if (!runtime.boss && !runtime.bossDefeated) {
+        runtime.enemySpawnTimerLeft -= dt;
+        if (runtime.enemySpawnTimerLeft <= 0) {
+            if (runtime.enemies.length < GAME_CONFIG.enemiesMaxCount) {
+                runtime.spawnEnemy({ avoidShip: true });
+                runtime.enemySpawnTimerLeft = runtime.computeEnemySpawnIntervalSec();
+            } else {
+                // If capped, retry soon.
+                runtime.enemySpawnTimerLeft = 0.5;
+            }
         }
+    }
+
+    // Boss spawn condition: after N enemy kills.
+    if (!runtime.boss && !runtime.bossDefeated && runtime.enemiesKilled >= GAME_CONFIG.bossSpawnAfterEnemiesKilled) {
+        runtime.spawnBoss({ kind: 'dreadnought', avoidShip: true });
     }
 
     const shipX = runtime.ship.sprite.x;
@@ -100,6 +108,11 @@ export function tickRun(runtime: RunRuntime, dtRaw: number) {
         store,
         purchasedUpgrades: store.purchasedUpgrades
     });
+
+    // Victory: after boss is killed we keep the run active for a short time to let the player collect loot.
+    if (runtime.bossDefeated && runtime.victoryTimerLeft <= 0 && useGameStore.getState().run) {
+        store.completeRunVictory();
+    }
 }
 
 

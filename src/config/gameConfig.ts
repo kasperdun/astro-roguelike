@@ -157,7 +157,26 @@ export const GAME_CONFIG = {
     enemyDropScrapChance: 0.42,
 
     /** Сколько скрапа выпадает (если выпал). */
-    enemyDropScrapAmount: 1
+    enemyDropScrapAmount: 1,
+
+    // -----------------------------
+    // Boss
+    // -----------------------------
+
+    /** Через сколько убийств врагов появляется босс (порог по enemiesKilled). */
+    bossSpawnAfterEnemiesKilled: 18,
+
+    /** Задержка (сек) после убийства босса перед завершением рана победой (чтобы собрать лут). */
+    bossVictoryDelaySec: 3.2,
+
+    /** Дроп минералов с босса (шт). */
+    bossDropMinerals: 60,
+
+    /** Дроп скрапа с босса (шт). */
+    bossDropScrap: 10,
+
+    /** Дроп ядер с босса (шт). */
+    bossDropCores: 1
 } as const;
 
 

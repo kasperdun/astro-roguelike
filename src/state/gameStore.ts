@@ -11,7 +11,7 @@ import {
 } from '../progression/upgrades';
 import { getRunBaseStats } from './runBaseStats';
 import { audio } from '../audio/audio';
-import type { SaveV1 } from '../persistence/save';
+import type { SaveLatest } from '../persistence/save';
 import type { GameState, LevelId, MenuTabId } from './gameStore/types';
 import { autosaveProgress } from './gameStore/autosave';
 
@@ -32,6 +32,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     bankMinerals: 0,
     bankScrap: 0,
+    bankCores: 0,
     purchasedUpgrades: {},
     upgradeTreeViewport: null,
 
@@ -78,7 +79,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                     magnetDropChance: derived.magnetDropChance
                 },
                 minerals: 0,
-                scrap: 0
+                scrap: 0,
+                cores: 0
             }
         });
     },
@@ -91,13 +93,14 @@ export const useGameStore = create<GameState>((set, get) => ({
                 run: null,
                 escapeDialogOpen: false,
                 bankMinerals: s.bankMinerals + run.minerals,
-                bankScrap: s.bankScrap + run.scrap
+                bankScrap: s.bankScrap + run.scrap,
+                bankCores: s.bankCores + run.cores
             };
         });
         autosaveProgress(get);
     },
 
-    hydrateFromSave: (save: SaveV1) =>
+    hydrateFromSave: (save: SaveLatest) =>
         set((s) => {
             audio.setMusicEnabled(save.musicEnabled);
             audio.setSfxEnabled(save.sfxEnabled);
@@ -106,6 +109,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 hasHydrated: true,
                 bankMinerals: save.bankMinerals,
                 bankScrap: save.bankScrap,
+                bankCores: save.bankCores,
                 musicEnabled: save.musicEnabled,
                 sfxEnabled: save.sfxEnabled,
                 purchasedUpgrades: save.purchasedUpgrades,
@@ -134,6 +138,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         set((s) => (s.run ? { run: { ...s.run, minerals: s.run.minerals + amount } } : s)),
     addScrap: (amount) =>
         set((s) => (s.run ? { run: { ...s.run, scrap: s.run.scrap + amount } } : s)),
+    addCores: (amount) =>
+        set((s) => (s.run ? { run: { ...s.run, cores: s.run.cores + amount } } : s)),
 
     applyDamageToShip: (amount) => {
         if (amount <= 0) return;
@@ -197,8 +203,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     purchaseUpgrade: (id: UpgradeId) => {
-        const { bankMinerals, bankScrap, purchasedUpgrades } = get();
-        const check = canPurchaseUpgrade({ id, minerals: bankMinerals, scrap: bankScrap, purchased: purchasedUpgrades });
+        const { bankMinerals, bankScrap, bankCores, purchasedUpgrades } = get();
+        const check = canPurchaseUpgrade({
+            id,
+            minerals: bankMinerals,
+            scrap: bankScrap,
+            cores: bankCores,
+            purchased: purchasedUpgrades
+        });
         if (!check.ok) return check;
 
         // canPurchaseUpgrade already validated; safe to compute the next cost.
@@ -208,13 +220,33 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         set((s) => {
             const nextPurchased = { ...s.purchasedUpgrades, [id]: current + 1 };
-            return currency === 'minerals'
-                ? { bankMinerals: s.bankMinerals - cost, purchasedUpgrades: nextPurchased }
-                : { bankScrap: s.bankScrap - cost, purchasedUpgrades: nextPurchased };
+            if (currency === 'minerals') return { bankMinerals: s.bankMinerals - cost, purchasedUpgrades: nextPurchased };
+            if (currency === 'scrap') return { bankScrap: s.bankScrap - cost, purchasedUpgrades: nextPurchased };
+            return { bankCores: s.bankCores - cost, purchasedUpgrades: nextPurchased };
         });
 
         autosaveProgress(get);
         return { ok: true };
+    },
+
+    completeRunVictory: () => {
+        set((s) => {
+            const run = s.run;
+            if (!run) return s;
+            const nextUnlocked = { ...s.unlockedLevels };
+            if (run.levelId === 1) nextUnlocked[2] = true;
+            return {
+                mode: 'menu',
+                run: null,
+                escapeDialogOpen: false,
+                bankMinerals: s.bankMinerals + run.minerals,
+                bankScrap: s.bankScrap + run.scrap,
+                bankCores: s.bankCores + run.cores,
+                unlockedLevels: nextUnlocked,
+                selectedLevelId: nextUnlocked[2] ? 2 : s.selectedLevelId
+            };
+        });
+        autosaveProgress(get);
     },
 
     setUpgradeTreeViewport: (v) => set({ upgradeTreeViewport: v })

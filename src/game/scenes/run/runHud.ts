@@ -49,8 +49,10 @@ export function createRunHudView(): RunHudView {
   const textSmallStyle = { fill: 0xbfc7ea, fontSize: 12 } as const;
   const mineralsText = new Text({ text: '', style: textSmallStyle });
   const scrapText = new Text({ text: '', style: textSmallStyle });
+  const coresText = new Text({ text: '', style: textSmallStyle });
   root.addChild(mineralsText);
   root.addChild(scrapText);
+  root.addChild(coresText);
 
   const controls = new Text({
     text: 'WASD: thrust   LMB: shoot   ESC: menu',
@@ -176,12 +178,15 @@ export function createRunHudView(): RunHudView {
     scrapText.x = panelPad + 110;
     scrapText.y = mineralsText.y;
 
+    coresText.x = panelPad + 200;
+    coresText.y = mineralsText.y;
+
     controls.x = panelPad;
     controls.y = mineralsText.y + 18;
 
     const rowsCount = (hpRow.visible ? 1 : 0) + (shieldRow.visible ? 1 : 0) + (fuelRow.visible ? 1 : 0);
     const effectiveRows = Math.max(2, rowsCount); // keep minimum size stable
-    const panelW = panelPad * 2 + 54 + barW + 10 + 72;
+    const panelW = panelPad * 2 + 54 + barW + 10 + 150;
     const panelH = panelPad * 2 + 22 + rowGap * effectiveRows + 40;
 
     panel.clear();
@@ -200,6 +205,7 @@ export function createRunHudView(): RunHudView {
     maxFuel: number;
     minerals: number;
     scrap: number;
+    cores: number;
     hasRun: boolean;
   } | null = null;
 
@@ -214,6 +220,7 @@ export function createRunHudView(): RunHudView {
       fuelRow.visible = false;
       mineralsText.text = '';
       scrapText.text = '';
+      coresText.text = '';
       controls.visible = true;
       layout();
       last = null;
@@ -230,6 +237,7 @@ export function createRunHudView(): RunHudView {
       maxFuel: run.maxFuel,
       minerals: run.minerals,
       scrap: run.scrap,
+      cores: run.cores,
       hasRun: true
     } as const;
 
@@ -244,7 +252,8 @@ export function createRunHudView(): RunHudView {
       Math.abs(last.shield - next.shield) >= 0.05 ||
       last.maxShield !== next.maxShield ||
       last.minerals !== next.minerals ||
-      last.scrap !== next.scrap;
+      last.scrap !== next.scrap ||
+      last.cores !== next.cores;
 
     if (!changed) return;
     last = { ...next };
@@ -265,6 +274,7 @@ export function createRunHudView(): RunHudView {
 
     mineralsText.text = `MINERALS: ${run.minerals}`;
     scrapText.text = `SCRAP: ${run.scrap}`;
+    coresText.text = `CORES: ${run.cores}`;
 
     controls.visible = true;
     layout();

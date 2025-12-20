@@ -30,7 +30,11 @@ export const UPGRADE_IDS = [
     'asteroid_explosion_radius',
     'enemy_resource_yield',
     'magnet_drop_chance',
-    'pickup_radius'
+    'pickup_radius',
+
+    // Boss-core upgrades (purchased with boss cores)
+    'core_overdrive',
+    'core_phase_shield'
 ] as const;
 
 export type UpgradeId = (typeof UPGRADE_IDS)[number];

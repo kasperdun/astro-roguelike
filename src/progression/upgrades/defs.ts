@@ -6,6 +6,7 @@ import { ECONOMY_UPGRADE_DEFS } from './defs/economy';
 import { FUEL_UPGRADE_DEFS } from './defs/fuel';
 import { MOVEMENT_UPGRADE_DEFS } from './defs/movement';
 import { WEAPON_UPGRADE_DEFS } from './defs/weapon';
+import { BOSS_CORE_UPGRADE_DEFS } from './defs/bossCore';
 
 type UpgradeDefs = Record<UpgradeId, Omit<UpgradeNode, 'id'>>;
 
@@ -14,7 +15,8 @@ const UPGRADE_DEFS = {
     ...DEFENSE_UPGRADE_DEFS,
     ...FUEL_UPGRADE_DEFS,
     ...MOVEMENT_UPGRADE_DEFS,
-    ...ECONOMY_UPGRADE_DEFS
+    ...ECONOMY_UPGRADE_DEFS,
+    ...BOSS_CORE_UPGRADE_DEFS
 } satisfies Partial<UpgradeDefs>;
 
 function getUpgradeDef(id: UpgradeId): Omit<UpgradeNode, 'id'> {

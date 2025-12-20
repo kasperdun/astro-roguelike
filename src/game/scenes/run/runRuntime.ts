@@ -1,8 +1,8 @@
 import type { Application, Container } from 'pixi.js';
 import { Sprite } from 'pixi.js';
 import { GAME_CONFIG } from '../../../config/gameConfig';
-import { createAsteroid, createEnemyWithKind, createPickup, applyAsteroidSpriteSize } from './runSpawn';
-import type { Asteroid, Bullet, Enemy, EnemyBullet, Pickup, PickupKind } from './runTypes';
+import { createAsteroid, createBossWithKind, createEnemyWithKind, createPickup, applyAsteroidSpriteSize } from './runSpawn';
+import type { Asteroid, Boss, Bullet, Enemy, EnemyBullet, Pickup, PickupKind } from './runTypes';
 import { RunShipView } from './runShipView';
 import { RunPlayerWeapons } from './runPlayerWeapons';
 import { getRunAssets, type RunAssets } from '../../runAssets';
@@ -20,6 +20,10 @@ export class RunRuntime {
     public pickups: Pickup[] = [];
     public enemies: Enemy[] = [];
     public enemyBullets: EnemyBullet[] = [];
+    public boss: Boss | null = null;
+    public bossBullets: EnemyBullet[] = [];
+    public bossDefeated = false;
+    public victoryTimerLeft = 0;
 
     public shipVx = 0;
     public shipVy = 0;
@@ -61,6 +65,10 @@ export class RunRuntime {
         this.pickups = [];
         this.enemies = [];
         this.enemyBullets = [];
+        this.boss = null;
+        this.bossBullets = [];
+        this.bossDefeated = false;
+        this.victoryTimerLeft = 0;
 
         this.shipVx = 0;
         this.shipVy = 0;
@@ -98,6 +106,10 @@ export class RunRuntime {
         this.pickups = [];
         this.enemies = [];
         this.enemyBullets = [];
+        this.boss = null;
+        this.bossBullets = [];
+        this.bossDefeated = false;
+        this.victoryTimerLeft = 0;
     }
 
     public resize(width: number, height: number) {
@@ -142,6 +154,25 @@ export class RunRuntime {
         });
         this.world.addChild(e.g);
         this.enemies.push(e);
+    }
+
+    public spawnBoss(args: { kind: Boss['kind']; avoidShip: boolean }) {
+        // Clear combat clutter to make the encounter readable.
+        for (const e of this.enemies) this.world.removeChild(e.g);
+        this.enemies = [];
+        for (const b of this.enemyBullets) this.world.removeChild(b.g);
+        this.enemyBullets = [];
+
+        const boss = createBossWithKind({
+            kind: args.kind,
+            width: this.width,
+            height: this.height,
+            shipX: this.ship.sprite.x,
+            shipY: this.ship.sprite.y,
+            avoidShip: args.avoidShip
+        });
+        this.world.addChild(boss.g);
+        this.boss = boss;
     }
 
     public spawnPickup(kind: PickupKind, amount: number, x: number, y: number) {

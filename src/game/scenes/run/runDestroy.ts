@@ -2,9 +2,10 @@ import type { Container } from 'pixi.js';
 import { GAME_CONFIG } from '../../../config/gameConfig';
 import { deriveEconomyStats, type DerivedRunStats, type PurchasedUpgrades } from '../../../progression/upgrades';
 import { getEnemyDef } from '../../enemies/enemyCatalog';
-import { spawnAsteroidExplosion, spawnEnemyDestruction } from './runEffects';
+import { getBossDef } from '../../boss/bossCatalog';
+import { spawnAsteroidExplosion, spawnBossDestruction, spawnEnemyDestruction } from './runEffects';
 import { circleHit } from './runMath';
-import type { Asteroid, Enemy, PickupKind } from './runTypes';
+import type { Asteroid, Boss, Enemy, PickupKind } from './runTypes';
 import { audio } from '../../../audio/audio';
 
 export function destroyAsteroid(args: {
@@ -103,8 +104,35 @@ export function destroyEnemy(args: {
     }
 }
 
+export function destroyBoss(args: {
+    boss: Boss;
+    world: Container;
+    purchasedUpgrades: PurchasedUpgrades;
+    spawnPickup: (kind: PickupKind, amount: number, x: number, y: number) => void;
+    onBossKilled: () => void;
+}) {
+    const b = args.boss;
+    args.world.removeChild(b.g);
+    args.onBossKilled();
+
+    audio.playHit();
+    spawnBossDestruction(args.world, { x: b.g.x, y: b.g.y, r: b.r, kind: b.kind, rotationRad: b.g.rotation });
+
+    const economy = deriveEconomyStats(args.purchasedUpgrades);
+    const minerals = Math.max(0, GAME_CONFIG.bossDropMinerals + economy.enemyMineralYieldBonus * 3);
+    for (let i = 0; i < minerals; i++) args.spawnPickup('minerals', 1, b.g.x, b.g.y);
+
+    for (let i = 0; i < Math.max(0, GAME_CONFIG.bossDropScrap); i++) args.spawnPickup('scrap', 1, b.g.x, b.g.y);
+
+    for (let i = 0; i < Math.max(0, GAME_CONFIG.bossDropCores); i++) args.spawnPickup('core', 1, b.g.x, b.g.y);
+}
+
 export function damageFromShipEnemyCollision(enemyKind: Enemy['kind']): number {
     return getEnemyDef(enemyKind).stats.collisionDamage;
+}
+
+export function damageFromShipBossCollision(bossKind: Boss['kind']): number {
+    return getBossDef(bossKind).stats.collisionDamage;
 }
 
 

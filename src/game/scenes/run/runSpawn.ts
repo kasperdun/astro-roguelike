@@ -1,9 +1,10 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { GAME_CONFIG } from '../../../config/gameConfig';
 import { getEnemyDef, type EnemyKind } from '../../enemies/enemyCatalog';
+import { getBossDef, type BossKind } from '../../boss/bossCatalog';
 import { getRunAssets, preloadRunAssets, type RunAssets } from '../../runAssets';
 import { lerp, lerp01, randInt, rotate } from './runMath';
-import type { Asteroid, Enemy, EnemyBullet, Pickup, PickupKind } from './runTypes';
+import type { Asteroid, Boss, Enemy, EnemyBullet, Pickup, PickupKind } from './runTypes';
 import { audio } from '../../../audio/audio';
 
 // Kick off asset loading as early as possible (safe to call multiple times).
@@ -20,6 +21,12 @@ export function applyAsteroidSpriteSize(sprite: Sprite, r: number, assets: RunAs
 
 function enemyRadiusFromTexture(args: { assets: RunAssets; kind: EnemyKind; spriteScale: number }): number {
     const baseDiameter = Math.max(1, args.assets.enemy[args.kind].baseOpaqueDiameterPx);
+    const scaledDiameter = baseDiameter * Math.max(0.001, args.spriteScale);
+    return scaledDiameter / 2;
+}
+
+function bossRadiusFromTexture(args: { assets: RunAssets; kind: BossKind; spriteScale: number }): number {
+    const baseDiameter = Math.max(1, args.assets.boss[args.kind].baseOpaqueDiameterPx);
     const scaledDiameter = baseDiameter * Math.max(0.001, args.spriteScale);
     return scaledDiameter / 2;
 }
@@ -136,6 +143,9 @@ export function createPickup(kind: PickupKind, amount: number, x: number, y: num
         case 'magnet':
             color = 0xb68cff;
             break;
+        case 'core':
+            color = 0xff6df7;
+            break;
         default:
             color = 0x9b6b33;
     }
@@ -249,6 +259,101 @@ export function createEnemyWithKind(args: {
     return { g, kind, vx, vy, r, hp: def.stats.hp, fireCooldownLeft, seed };
 }
 
+export function createBossWithKind(args: {
+    kind: BossKind;
+    width: number;
+    height: number;
+    shipX: number;
+    shipY: number;
+    avoidShip: boolean;
+}): Boss {
+    const { kind, width, height, shipX, shipY, avoidShip } = args;
+
+    const def = getBossDef(kind);
+    const assets = getRunAssets();
+    const r = assets ? bossRadiusFromTexture({ assets, kind, spriteScale: def.spriteScale }) : def.stats.radiusPx;
+
+    let g: Container;
+    if (assets) {
+        const sprite = new Sprite(assets.boss[kind].base);
+        sprite.anchor.set(0.5);
+        sprite.scale.set(def.spriteScale);
+        g = sprite;
+    } else {
+        const ph = new Graphics();
+        ph.roundRect(-r, -r, r * 2, r * 2, 10).fill({ color: 0xff4ad2, alpha: 0.65 }).stroke({ color: 0x40102f, width: 2, alpha: 0.9 });
+        g = ph;
+    }
+
+    // Spawn outside the screen (like enemies) so it flies in.
+    const spawnMargin = 28;
+    const side = randInt(0, 3);
+    let x = 0;
+    let y = 0;
+    if (side === 0) {
+        x = -r - spawnMargin;
+        y = Math.random() * Math.max(1, height);
+    } else if (side === 1) {
+        x = width + r + spawnMargin;
+        y = Math.random() * Math.max(1, height);
+    } else if (side === 2) {
+        x = Math.random() * Math.max(1, width);
+        y = -r - spawnMargin;
+    } else {
+        x = Math.random() * Math.max(1, width);
+        y = height + r + spawnMargin;
+    }
+
+    let tx = width * 0.5;
+    let ty = height * 0.25;
+    if (avoidShip) {
+        const minDist = 220;
+        for (let i = 0; i < 24; i++) {
+            const dx = tx - shipX;
+            const dy = ty - shipY;
+            if (Math.hypot(dx, dy) >= minDist) break;
+            tx = Math.random() * Math.max(1, width);
+            ty = Math.random() * Math.max(1, height);
+        }
+    }
+
+    let dirX = tx - x;
+    let dirY = ty - y;
+    const dirLen = Math.hypot(dirX, dirY) || 1;
+    dirX /= dirLen;
+    dirY /= dirLen;
+
+    const jitterRad = ((Math.random() * 2 - 1) * 10 * Math.PI) / 180;
+    const j = rotate(dirX, dirY, jitterRad);
+    dirX = j.x;
+    dirY = j.y;
+
+    const speed = Math.min(def.stats.maxSpeedPxPerSec, def.stats.maxSpeedPxPerSec * (0.55 + Math.random() * 0.25));
+    const vx = dirX * speed;
+    const vy = dirY * speed;
+
+    g.x = x;
+    g.y = y;
+
+    const seed = Math.random();
+    return {
+        g,
+        kind,
+        vx,
+        vy,
+        r,
+        hp: def.stats.hp,
+        maxHp: def.stats.hp,
+        mode: 'aimed',
+        modeTimeLeft: 2.0,
+        burstShotsLeft: 0,
+        burstShotTimerLeft: 0,
+        aimedCooldownLeft: 0.8 + seed * 0.4,
+        ringTelegraphLeft: 0,
+        seed
+    };
+}
+
 export function createEnemyBullet(args: {
     x: number;
     y: number;
@@ -263,6 +368,30 @@ export function createEnemyBullet(args: {
     g.x = args.x;
     g.y = args.y;
     audio.playEnemyShoot();
+    return {
+        g,
+        vx: args.vx,
+        vy: args.vy,
+        r: args.r,
+        life: args.life,
+        damage: args.damage
+    };
+}
+
+export function createBossBullet(args: {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    r: number;
+    life: number;
+    damage: number;
+}): EnemyBullet {
+    const g = new Graphics();
+    g.circle(0, 0, args.r).fill({ color: 0xff4ad2, alpha: 0.98 });
+    g.x = args.x;
+    g.y = args.y;
+    // Intentionally no SFX here: boss patterns can spawn many bullets and would spam audio.
     return {
         g,
         vx: args.vx,
