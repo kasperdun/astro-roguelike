@@ -30,6 +30,26 @@ export function stepWorldAndCombat(args: {
 }) {
     const { runtime, dt, shipX, shipY, stats, store, purchasedUpgrades } = args;
 
+    const handleBossDestroyed = () => {
+        const boss = runtime.boss;
+        if (!boss) return;
+        destroyBoss({
+            boss,
+            world: runtime.world,
+            purchasedUpgrades,
+            spawnPickup: (kind, amount, x, y) => runtime.spawnPickup(kind, amount, x, y),
+            onBossKilled: () => {
+                runtime.boss = null;
+                runtime.bossDefeated = true;
+                runtime.victoryTimerLeft = GAME_CONFIG.bossVictoryDelaySec;
+
+                // Clear boss bullets so the end-of-run window is readable.
+                for (const bb of runtime.bossBullets) runtime.world.removeChild(bb.g);
+                runtime.bossBullets = [];
+            }
+        });
+    };
+
     updateBullets({ bullets: runtime.bullets, world: runtime.world, dt, width: runtime.width, height: runtime.height });
     updateEnemyBullets({ bullets: runtime.enemyBullets, world: runtime.world, dt, width: runtime.width, height: runtime.height });
     updateBossBullets({ bullets: runtime.bossBullets, world: runtime.world, dt, width: runtime.width, height: runtime.height });
@@ -94,25 +114,7 @@ export function stepWorldAndCombat(args: {
             world: runtime.world,
             bulletDamage: stats.bulletDamage,
             onBulletHit: () => audio.playHit(),
-            onBossDestroyed: () => {
-                const boss = runtime.boss;
-                if (!boss) return;
-                destroyBoss({
-                    boss,
-                    world: runtime.world,
-                    purchasedUpgrades,
-                    spawnPickup: (kind, amount, x, y) => runtime.spawnPickup(kind, amount, x, y),
-                    onBossKilled: () => {
-                        runtime.boss = null;
-                        runtime.bossDefeated = true;
-                        runtime.victoryTimerLeft = GAME_CONFIG.bossVictoryDelaySec;
-
-                        // Clear boss bullets so the end-of-run window is readable.
-                        for (const bb of runtime.bossBullets) runtime.world.removeChild(bb.g);
-                        runtime.bossBullets = [];
-                    }
-                });
-            }
+            onBossDestroyed: handleBossDestroyed
         });
     }
 
@@ -152,6 +154,7 @@ export function stepWorldAndCombat(args: {
                 world: runtime.world,
                 asteroids: runtime.asteroids,
                 enemies: runtime.enemies,
+                boss: runtime.boss,
                 shipX,
                 shipY,
                 purchasedUpgrades,
@@ -179,6 +182,7 @@ export function stepWorldAndCombat(args: {
                         }
                     });
                 },
+                onBossDestroyed: handleBossDestroyed,
                 spawnPickup: (kind, amount, x, y) => runtime.spawnPickup(kind, amount, x, y)
             });
         }

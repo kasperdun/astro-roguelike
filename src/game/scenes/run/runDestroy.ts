@@ -13,6 +13,7 @@ export function destroyAsteroid(args: {
     world: Container;
     asteroids: Asteroid[];
     enemies: Enemy[];
+    boss?: Boss | null;
     shipX: number;
     shipY: number;
     purchasedUpgrades: PurchasedUpgrades;
@@ -20,6 +21,7 @@ export function destroyAsteroid(args: {
     applyDamageToShip: (damage: number) => void;
     onShipHitForInvulnAndShieldDelay: () => void;
     onEnemyDestroyed: (index: number) => void;
+    onBossDestroyed?: () => void;
     spawnPickup: (kind: PickupKind, amount: number, x: number, y: number) => void;
 }) {
     const a = args.asteroids[args.index];
@@ -32,7 +34,7 @@ export function destroyAsteroid(args: {
     audio.playAsteroidDead();
     spawnAsteroidExplosion(args.world, a.g.x, a.g.y, a.r);
 
-    // AOE damage on explosion (ship + enemies).
+    // AOE damage on explosion (ship + enemies + other asteroids + boss).
     const explosionDamage = args.stats.asteroidExplosionDamage;
     const explosionR = a.r * GAME_CONFIG.asteroidExplosionRadiusFromAsteroidMult + args.stats.asteroidExplosionRadiusBonusPx;
     if (explosionDamage > 0 && explosionR > 0) {
@@ -48,6 +50,27 @@ export function destroyAsteroid(args: {
             e.hp -= explosionDamage;
             e.hpBarVisible = true;
             if (e.hp <= 0) args.onEnemyDestroyed(ei);
+        }
+
+        // Damage other asteroids (can chain-explode).
+        const destroyedAsteroidIndices: number[] = [];
+        for (let ai = args.asteroids.length - 1; ai >= 0; ai--) {
+            const other = args.asteroids[ai];
+            if (!other) continue;
+            if (!circleHit(other.g.x, other.g.y, other.r, a.g.x, a.g.y, explosionR)) continue;
+            other.hp -= explosionDamage;
+            other.hpBarVisible = true;
+            if (other.hp <= 0) destroyedAsteroidIndices.push(ai);
+        }
+        for (const ai of destroyedAsteroidIndices) {
+            destroyAsteroid({ ...args, index: ai });
+        }
+
+        // Damage boss (if present).
+        const boss = args.boss;
+        if (boss && circleHit(boss.g.x, boss.g.y, boss.r, a.g.x, a.g.y, explosionR)) {
+            boss.hp -= explosionDamage;
+            if (boss.hp <= 0) args.onBossDestroyed?.();
         }
     }
 
