@@ -16,6 +16,7 @@ export type RunBaseStats = {
     fuelDrainWhileThrustPerSec: number;
     fuelDrainPerShot: number;
     shieldRegenDelaySec: number;
+    pickupMagnetRadiusPx: number;
 };
 
 export function getRunBaseStats(): RunBaseStats {
@@ -34,7 +35,8 @@ export function getRunBaseStats(): RunBaseStats {
         fuelDrainPerSec: GAME_CONFIG.fuelDrainPerSec,
         fuelDrainWhileThrustPerSec: GAME_CONFIG.fuelDrainWhileThrustPerSec,
         fuelDrainPerShot: GAME_CONFIG.fuelDrainPerShot,
-        shieldRegenDelaySec: 0.7
+        shieldRegenDelaySec: 0.7,
+        pickupMagnetRadiusPx: GAME_CONFIG.pickupMagnetRadiusPx
     };
 }
 

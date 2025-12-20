@@ -54,8 +54,12 @@ export function updatePickups(args: {
     onCollectFuel: (amount: number) => void;
     onCollectHealth: (amount: number) => void;
     onCollect?: (pickup: Pickup) => void;
+    magnetRadiusPx?: number;
+    magnetAccelPxPerSec2?: number;
 }) {
     const { pickups, world, dt, width, height, shipX, shipY, onCollectMinerals, onCollectScrap, onCollectFuel, onCollectHealth, onCollect } = args;
+    const magnetRadiusPx = args.magnetRadiusPx ?? GAME_CONFIG.pickupMagnetRadiusPx;
+    const magnetAccelPxPerSec2 = args.magnetAccelPxPerSec2 ?? GAME_CONFIG.pickupMagnetAccelPxPerSec2;
 
     for (let i = pickups.length - 1; i >= 0; i--) {
         const p = pickups[i];
@@ -70,6 +74,7 @@ export function updatePickups(args: {
                 case 'scrap': onCollectScrap(p.amount); break;
                 case 'fuel': onCollectFuel(p.amount); break;
                 case 'health': onCollectHealth(p.amount); break;
+                case 'magnet': break;
             }
             onCollect?.(p);
             world.removeChild(p.g);
@@ -77,11 +82,11 @@ export function updatePickups(args: {
             continue;
         }
 
-        if (d > 0 && d < GAME_CONFIG.pickupMagnetRadiusPx) {
+        if (d > 0 && d < magnetRadiusPx) {
             const nx = dx / d;
             const ny = dy / d;
-            p.vx += nx * GAME_CONFIG.pickupMagnetAccelPxPerSec2 * dt;
-            p.vy += ny * GAME_CONFIG.pickupMagnetAccelPxPerSec2 * dt;
+            p.vx += nx * magnetAccelPxPerSec2 * dt;
+            p.vy += ny * magnetAccelPxPerSec2 * dt;
         }
 
         const pd = Math.exp(-GAME_CONFIG.pickupDampingPerSec * dt);

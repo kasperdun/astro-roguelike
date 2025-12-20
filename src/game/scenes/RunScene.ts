@@ -60,6 +60,7 @@ export class RunScene implements Scene {
     private enemySpawnTimerLeft = 0;
     private enemiesKilled = 0;
     private runTimeSec = 0;
+    private pickupVacuumLeft = 0;
 
     private input = {
         w: false,
@@ -312,6 +313,7 @@ export class RunScene implements Scene {
         this.fireCooldownLeft = Math.max(0, this.fireCooldownLeft - dt);
         this.shieldRegenBlockedLeft = Math.max(0, this.shieldRegenBlockedLeft - dt);
         this.runTimeSec += dt;
+        this.pickupVacuumLeft = Math.max(0, this.pickupVacuumLeft - dt);
 
         // shield regen (after delay)
         if (run.maxShield > 0 && stats.shieldRegenPerSec > 0 && this.shieldRegenBlockedLeft <= 0) {
@@ -368,8 +370,17 @@ export class RunScene implements Scene {
             onCollectScrap: (amount) => store.addScrap(amount),
             onCollectFuel: (amount) => store.addFuel(amount),
             onCollectHealth: (amount) => store.addHealth(amount),
-            onCollect: () => audio.playPickupPop()
+            magnetRadiusPx: this.pickupVacuumLeft > 0 ? 999999 : stats.pickupMagnetRadiusPx,
+            magnetAccelPxPerSec2: this.pickupVacuumLeft > 0 ? 7200 : undefined,
+            onCollect: (p) => {
+                audio.playPickupPop();
+                if (p.kind === 'magnet') {
+                    // Vacuum effect: temporarily pull *all* pickups on the level to the ship.
+                    this.pickupVacuumLeft = Math.max(this.pickupVacuumLeft, 2.6);
+                }
+            }
         });
+        if (this.pickupVacuumLeft > 0 && this.pickups.length === 0) this.pickupVacuumLeft = 0;
 
         resolveBulletEnemyCollisions({
             bullets: this.bullets,
@@ -627,6 +638,13 @@ export class RunScene implements Scene {
 
         if (economy.healthDropChance > 0 && Math.random() < economy.healthDropChance) {
             this.spawnPickup('health', GAME_CONFIG.healthPickupAmount, e.g.x, e.g.y);
+        }
+
+        // Magnet pickup (upgrade-driven)
+        const run = useGameStore.getState().run;
+        const magnetDropChance = run?.stats.magnetDropChance ?? 0;
+        if (magnetDropChance > 0 && Math.random() < magnetDropChance) {
+            this.spawnPickup('magnet', 1, e.g.x, e.g.y);
         }
     }
 

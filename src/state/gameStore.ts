@@ -46,6 +46,8 @@ export type RunSession = {
         asteroidsMaxCount: number;
         asteroidExplosionDamage: number;
         asteroidExplosionRadiusBonusPx: number;
+        pickupMagnetRadiusPx: number;
+        magnetDropChance: number;
     };
     minerals: number;
     scrap: number;
@@ -156,7 +158,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                     asteroidsSpawnIntervalSec: derived.asteroidsSpawnIntervalSec,
                     asteroidsMaxCount: derived.asteroidsMaxCount,
                     asteroidExplosionDamage: derived.asteroidExplosionDamage,
-                    asteroidExplosionRadiusBonusPx: derived.asteroidExplosionRadiusBonusPx
+                    asteroidExplosionRadiusBonusPx: derived.asteroidExplosionRadiusBonusPx,
+                    pickupMagnetRadiusPx: derived.pickupMagnetRadiusPx,
+                    magnetDropChance: derived.magnetDropChance
                 },
                 minerals: 0,
                 scrap: 0

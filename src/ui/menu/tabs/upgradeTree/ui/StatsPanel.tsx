@@ -5,10 +5,7 @@ export function StatsPanel({
     base,
     derived
 }: {
-    base: Pick<
-        RunBaseStats,
-        'startHp' | 'startFuel' | 'bulletDamage' | 'bulletLifetimeSec' | 'bulletSpeedPxPerSec' | 'weaponFireRatePerSec' | 'shipMaxSpeedPxPerSec'
-    >;
+    base: RunBaseStats;
     derived: ReturnType<typeof deriveRunStats>;
 }) {
     const line = (
@@ -48,14 +45,41 @@ export function StatsPanel({
             <div style={{ fontSize: 14, fontWeight: 900, marginBottom: 8 }}>Статы</div>
 
             {line('Урон', base.bulletDamage, derived.bulletDamage - base.bulletDamage)}
-            {line('Здоровье', base.startHp, derived.maxHp - base.startHp)}
-            {line('Топливо', base.startFuel, derived.maxFuel - base.startFuel)}
-            {line('Скорострельность', base.weaponFireRatePerSec, derived.weaponFireRatePerSec - base.weaponFireRatePerSec, (n) => n.toFixed(2))}
+            {line('Снарядов за выстрел', 1, derived.projectilesPerShot - 1)}
+            {line('Скорострельность (выстр/с)', base.weaponFireRatePerSec, derived.weaponFireRatePerSec - base.weaponFireRatePerSec, (n) => n.toFixed(2))}
             {line('Скорость пули', base.bulletSpeedPxPerSec, derived.bulletSpeedPxPerSec - base.bulletSpeedPxPerSec)}
             {line('Дальность (время жизни)', base.bulletLifetimeSec, derived.bulletLifetimeSec - base.bulletLifetimeSec, (n) => n.toFixed(2))}
-            {line('Скорость корабля', base.shipMaxSpeedPxPerSec, derived.shipMaxSpeedPxPerSec - base.shipMaxSpeedPxPerSec)}
+
+            {line('Здоровье', base.startHp, derived.maxHp - base.startHp)}
+            {line('Топливо', base.startFuel, derived.maxFuel - base.startFuel)}
             {line('Реген топлива', 0, derived.fuelRegenPerSec, (n) => n.toFixed(2))}
+
             {line('Щит', 0, derived.maxShield)}
+            {line('Реген щита', 0, derived.shieldRegenPerSec, (n) => n.toFixed(2))}
+            {line('Задержка регена щита (с)', base.shieldRegenDelaySec, derived.shieldRegenDelaySec - base.shieldRegenDelaySec, (n) => n.toFixed(2))}
+
+            {line('Ускорение корабля', base.shipAccelPxPerSec2, derived.shipAccelPxPerSec2 - base.shipAccelPxPerSec2)}
+            {line('Скорость корабля', base.shipMaxSpeedPxPerSec, derived.shipMaxSpeedPxPerSec - base.shipMaxSpeedPxPerSec)}
+
+            {line('Расход топлива (с)', base.fuelDrainPerSec, derived.fuelDrainPerSec - base.fuelDrainPerSec, (n) => n.toFixed(2))}
+            {line('Расход топлива (тяга)', base.fuelDrainWhileThrustPerSec, derived.fuelDrainWhileThrustPerSec - base.fuelDrainWhileThrustPerSec, (n) => n.toFixed(2))}
+            {line('Расход топлива (выстрел)', base.fuelDrainPerShot, derived.fuelDrainPerShot - base.fuelDrainPerShot, (n) => n.toFixed(2))}
+
+            {line('Шанс дропа топлива', 0, derived.fuelDropChance, (n) => `${Math.round(n * 100)}%`)}
+            {line('Шанс дропа здоровья', 0, derived.healthDropChance, (n) => `${Math.round(n * 100)}%`)}
+            {line('Шанс дропа магнита', 0, derived.magnetDropChance, (n) => `${Math.round(n * 100)}%`)}
+
+            {line('Радиус подбора (px)', base.pickupMagnetRadiusPx, derived.pickupMagnetRadiusPx - base.pickupMagnetRadiusPx)}
+
+            {line('Бонус минералов (астероид)', 0, derived.asteroidMineralYieldBonus)}
+            {line('Бонус минералов (враг)', 0, derived.enemyMineralYieldBonus)}
+
+            {line('Интервал спавна астероидов (с)', base.asteroidsSpawnIntervalSec, derived.asteroidsSpawnIntervalSec - base.asteroidsSpawnIntervalSec, (n) => n.toFixed(2))}
+            {line('Макс. астероидов', base.asteroidsMaxCount, derived.asteroidsMaxCount - base.asteroidsMaxCount)}
+            {line('AOE урон астероида', base.asteroidExplosionDamage, derived.asteroidExplosionDamage - base.asteroidExplosionDamage)}
+            {line('AOE радиус (бонус px)', 0, derived.asteroidExplosionRadiusBonusPx)}
+
+            {line('Снижение урона от столкновений', 0, 1 - derived.collisionDamageMultiplier, (n) => `${Math.round(n * 100)}%`)}
         </div>
     );
 }

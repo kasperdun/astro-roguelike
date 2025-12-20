@@ -30,7 +30,7 @@ export type Enemy = {
     seed: number;
 };
 
-export type PickupKind = 'minerals' | 'scrap' | 'fuel' | 'health';
+export type PickupKind = 'minerals' | 'scrap' | 'fuel' | 'health' | 'magnet';
 
 export type Pickup = {
     g: Graphics;

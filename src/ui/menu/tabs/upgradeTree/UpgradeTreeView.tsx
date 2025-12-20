@@ -60,12 +60,7 @@ export function UpgradeTreeView() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ fontSize: 18, fontWeight: 800 }}>Upgrades</div>
-                <div style={{ fontSize: 12, opacity: 0.85 }}>
-                    Minerals: <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{bankMinerals}</span>
-                    <span style={{ marginLeft: 10 }}>
-                        Scrap: <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{bankScrap}</span>
-                    </span>
-                </div>
+                <div />
             </div>
 
             <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>

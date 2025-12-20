@@ -31,6 +31,7 @@ export function deriveRunStats(args: {
         fuelDrainWhileThrustPerSec: number;
         fuelDrainPerShot: number;
         shieldRegenDelaySec: number;
+        pickupMagnetRadiusPx: number;
     };
     purchased: PurchasedUpgrades;
 }): DerivedRunStats {
@@ -66,6 +67,8 @@ export function deriveRunStats(args: {
 
     const healthDropChance = Math.max(0, Math.min(0.95, eff.healthDropChanceBonus ?? 0));
 
+    const magnetDropChance = Math.max(0, Math.min(0.95, eff.magnetDropChanceBonus ?? 0));
+
     const maxShield = Math.max(0, eff.maxShieldBonus ?? 0);
     const shieldRegenPerSec = Math.max(0, eff.shieldRegenPerSec ?? 0);
     const shieldRegenDelaySec = Math.max(0, base.shieldRegenDelaySec + (eff.shieldRegenDelayBonusSec ?? 0));
@@ -82,6 +85,8 @@ export function deriveRunStats(args: {
 
     const asteroidExplosionDamage = Math.max(0, base.asteroidExplosionDamage + (eff.asteroidExplosionDamageBonus ?? 0));
     const asteroidExplosionRadiusBonusPx = Math.max(0, eff.asteroidExplosionRadiusBonusPx ?? 0);
+
+    const pickupMagnetRadiusPx = Math.max(0, base.pickupMagnetRadiusPx + (eff.pickupMagnetRadiusBonusPx ?? 0));
 
     return {
         startHp: maxHp,
@@ -110,11 +115,13 @@ export function deriveRunStats(args: {
         enemyMineralYieldBonus,
         fuelDropChance,
         healthDropChance,
+        magnetDropChance,
         collisionDamageMultiplier,
         asteroidsSpawnIntervalSec,
         asteroidsMaxCount,
         asteroidExplosionDamage,
-        asteroidExplosionRadiusBonusPx
+        asteroidExplosionRadiusBonusPx,
+        pickupMagnetRadiusPx
     };
 }
 
@@ -136,7 +143,8 @@ export function deriveShipStartStats(base: ShipStartStats, purchased: PurchasedU
             fuelDrainPerSec: 0,
             fuelDrainWhileThrustPerSec: 0,
             fuelDrainPerShot: 0,
-            shieldRegenDelaySec: 0
+            shieldRegenDelaySec: 0,
+            pickupMagnetRadiusPx: 0
         },
         purchased
     });
@@ -161,7 +169,8 @@ export function deriveEconomyStats(purchased: PurchasedUpgrades): EconomyStats {
             fuelDrainPerSec: 0,
             fuelDrainWhileThrustPerSec: 0,
             fuelDrainPerShot: 0,
-            shieldRegenDelaySec: 0
+            shieldRegenDelaySec: 0,
+            pickupMagnetRadiusPx: 0
         },
         purchased
     });
@@ -169,7 +178,8 @@ export function deriveEconomyStats(purchased: PurchasedUpgrades): EconomyStats {
         asteroidMineralYieldBonus: stats.asteroidMineralYieldBonus,
         enemyMineralYieldBonus: stats.enemyMineralYieldBonus,
         fuelDropChance: stats.fuelDropChance,
-        healthDropChance: stats.healthDropChance
+        healthDropChance: stats.healthDropChance,
+        magnetDropChance: stats.magnetDropChance
     };
 }
 

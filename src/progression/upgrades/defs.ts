@@ -318,6 +318,28 @@ const UPGRADE_DEFS: UpgradeDefs = {
         requires: [{ id: 'mining_yield', level: 2 }],
         cost: { currency: 'minerals', base: 34, growth: 1.47 },
         perLevel: { enemyMineralYieldBonus: 1 }
+    },
+
+    pickup_radius: {
+        title: 'Collection Field',
+        description: 'Радиус притяжения лута к кораблю. +8 px за уровень.',
+        icon: 'core',
+        pos: { col: 0, row: 3 },
+        maxLevel: 5,
+        requires: [{ id: 'mining_yield', level: 2 }],
+        cost: { currency: 'minerals', base: 26, growth: 1.46 },
+        perLevel: { pickupMagnetRadiusBonusPx: 8 }
+    },
+
+    magnet_drop_chance: {
+        title: 'Magnet Scavenging',
+        description: 'Шанс выпадения магнита при убийстве врага. +1% за уровень.',
+        icon: 'core',
+        pos: { col: -4, row: 4 },
+        maxLevel: 5,
+        requires: [{ id: 'enemy_resource_yield', level: 1 }],
+        cost: { currency: 'minerals', base: 38, growth: 1.5 },
+        perLevel: { magnetDropChanceBonus: 0.01 }
     }
 };
 

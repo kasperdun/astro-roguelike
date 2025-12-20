@@ -50,6 +50,9 @@ export type UpgradeEffectPerLevel = {
     /** Шанс выпадения топлива (0..1), аддитивно. */
     fuelDropChanceBonus?: number;
 
+    /** Шанс выпадения магнита при убийстве врага (0..1), аддитивно. */
+    magnetDropChanceBonus?: number;
+
     /** Бонус к щиту (ед). Щит поглощает урон до HP. */
     maxShieldBonus?: number;
     /** Реген щита (ед/сек) после задержки. */
@@ -61,6 +64,9 @@ export type UpgradeEffectPerLevel = {
     asteroidMineralYieldBonus?: number;
     /** Бонус к минералам за врага (аддитивно). */
     enemyMineralYieldBonus?: number;
+
+    /** Бонус к радиусу “магнита” подбора лута (px, аддитивно). */
+    pickupMagnetRadiusBonusPx?: number;
 
     /** Ускорение спавна астероидов: доля сокращения интервала (0..1), аддитивно. */
     asteroidSpawnIntervalReduction?: number;
@@ -119,6 +125,7 @@ export type EconomyStats = {
     enemyMineralYieldBonus: number;
     fuelDropChance: number;
     healthDropChance: number;
+    magnetDropChance: number;
 };
 
 export type CombatAndMovementStats = {
@@ -146,6 +153,8 @@ export type CombatAndMovementStats = {
     asteroidsMaxCount: number;
     asteroidExplosionDamage: number;
     asteroidExplosionRadiusBonusPx: number;
+
+    pickupMagnetRadiusPx: number;
 };
 
 export type DerivedRunStats = ShipStartStats & EconomyStats & CombatAndMovementStats & { maxHp: number; maxFuel: number };

@@ -117,6 +117,9 @@ export function createPickup(kind: PickupKind, amount: number, x: number, y: num
         case 'health':
             color = 0x7cff7c;
             break;
+        case 'magnet':
+            color = 0xb68cff;
+            break;
         default:
             color = 0x9b6b33;
     }

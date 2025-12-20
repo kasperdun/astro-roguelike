@@ -28,7 +28,9 @@ export const UPGRADE_IDS = [
     'asteroid_max_count',
     'asteroid_explosion_damage',
     'asteroid_explosion_radius',
-    'enemy_resource_yield'
+    'enemy_resource_yield',
+    'magnet_drop_chance',
+    'pickup_radius'
 ] as const;
 
 export type UpgradeId = (typeof UPGRADE_IDS)[number];

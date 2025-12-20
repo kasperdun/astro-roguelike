@@ -9,8 +9,6 @@ export function BottomBar({ onGoToMine }: Props) {
   const selectedLevelId = useGameStore((s) => s.selectedLevelId);
   const unlockedLevels = useGameStore((s) => s.unlockedLevels);
   const selectLevel = useGameStore((s) => s.selectLevel);
-  const bankMinerals = useGameStore((s) => s.bankMinerals);
-  const bankScrap = useGameStore((s) => s.bankScrap);
 
   const levels: LevelId[] = [1, 2];
 
@@ -34,16 +32,6 @@ export function BottomBar({ onGoToMine }: Props) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
-          <div style={{ fontSize: 12, opacity: 0.85 }}>Bank</div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <StatPill label="Minerals" value={bankMinerals} />
-            <StatPill label="Scrap" value={bankScrap} />
-          </div>
-        </div>
-
-        <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.10)' }} />
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontSize: 12, opacity: 0.85 }}>Level</div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -100,26 +88,3 @@ export function BottomBar({ onGoToMine }: Props) {
     </div>
   );
 }
-
-function StatPill({ label, value }: { label: string; value: number }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        height: 28,
-        padding: '0 10px',
-        borderRadius: 999,
-        border: '1px solid rgba(255,255,255,0.12)',
-        background: 'rgba(0,0,0,0.25)',
-        color: 'rgba(255,255,255,0.9)'
-      }}
-    >
-      <div style={{ fontSize: 12, opacity: 0.75 }}>{label}</div>
-      <div style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-    </div>
-  );
-}
-
-
