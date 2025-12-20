@@ -12,7 +12,7 @@ export const BOSS_CORE_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         maxLevel: 1,
         requires: [{ id: 'marksman_protocol', level: 1 }],
         cost: { currency: 'core', base: 1, growth: 1.0 },
-        perLevel: { bulletDamageBonus: 25, weaponFireRateMult: 0.2 }
+        perLevel: { bulletDamageBonus: 6, weaponFireRateMult: 0.15 }
     },
     core_phase_shield: {
         title: 'Phase Shield',
@@ -22,7 +22,7 @@ export const BOSS_CORE_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         maxLevel: 1,
         requires: [{ id: 'fortress_protocol', level: 1 }],
         cost: { currency: 'core', base: 1, growth: 1.0 },
-        perLevel: { maxShieldBonus: 70, shieldRegenPerSec: 4.5 }
+        perLevel: { maxShieldBonus: 55, shieldRegenPerSec: 3.6 }
     }
 };
 

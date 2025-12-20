@@ -42,7 +42,7 @@ export const GAME_CONFIG = {
     bulletRadiusPx: 3,
 
     /** Урон пули по астероидам (MVP). */
-    bulletDamage: 18,
+    bulletDamage: 1,
 
     /** Сила “кинетического импульса” пули, передаваемого астероиду (0..1+). */
     bulletAsteroidImpulseFactor: 0.04,
@@ -75,10 +75,10 @@ export const GAME_CONFIG = {
     asteroidMaxRadiusPx: 59,
 
     /** HP астероида при минимальном радиусе (линейно растёт к max radius). */
-    asteroidHpAtMinRadius: 40,
+    asteroidHpAtMinRadius: 3,
 
     /** HP астероида при максимальном радиусе (линейно растёт от min radius). */
-    asteroidHpAtMaxRadius: 120,
+    asteroidHpAtMaxRadius: 3,
 
     /** Шанс, что астероид будет вращаться (0..1). */
     asteroidSpinChance: 0.55,
@@ -99,7 +99,7 @@ export const GAME_CONFIG = {
     asteroidCollisionDamage: 125,
 
     /** Сколько минералов выпадает за один разрушенный астероид (фиксировано для упрощения баланса). */
-    asteroidDropMineralsPerAsteroid: 2,
+    asteroidDropMineralsPerAsteroid: 1,
 
     /** Шанс выпадения скрапа при разрушении астероида (0..1). */
     asteroidDropScrapChance: 0.22,
@@ -151,7 +151,7 @@ export const GAME_CONFIG = {
     enemiesSpawnIntervalMinSec: 2.6,
 
     /** Сколько минералов выпадает за убитого врага (база). */
-    enemyDropMineralsPerEnemy: 6,
+    enemyDropMineralsPerEnemy: 2,
 
     /** Шанс выпадения скрапа при убийстве врага (0..1). */
     enemyDropScrapChance: 0.42,
@@ -164,19 +164,56 @@ export const GAME_CONFIG = {
     // -----------------------------
 
     /** Через сколько убийств врагов появляется босс (порог по enemiesKilled). */
-    bossSpawnAfterEnemiesKilled: 18,
+    bossSpawnAfterEnemiesKilled: 12,
 
     /** Задержка (сек) после убийства босса перед завершением рана победой (чтобы собрать лут). */
     bossVictoryDelaySec: 3.2,
 
     /** Дроп минералов с босса (шт). */
-    bossDropMinerals: 60,
+    bossDropMinerals: 40,
 
     /** Дроп скрапа с босса (шт). */
-    bossDropScrap: 10,
+    bossDropScrap: 8,
 
     /** Дроп ядер с босса (шт). */
     bossDropCores: 1
+
+    ,
+    // -----------------------------
+    // Level scaling (difficulty)
+    // -----------------------------
+    /**
+     * Настройки сложности по уровням.
+     *
+     * Важно:
+     * - Уровень 1: очень маленькие числа (урон=1, астероиды стартуют с 3 HP).
+     * - Уровень 2: резкий скачок (астероидам старт от 30 HP, враги/босс сильнее и живучее).
+     * - “Со временем”: новые астероиды постепенно спавнятся с большим HP.
+     */
+    levelBalance: {
+        1: {
+            asteroidHpStartMin: 3,
+            asteroidHpStartMax: 3,
+            asteroidHpRampEverySec: 8,
+            asteroidHpRampPerStep: 1,
+
+            enemyHpMult: 1.0,
+            enemyDamageMult: 1.0,
+            bossHpMult: 1.0,
+            bossDamageMult: 1.0
+        },
+        2: {
+            asteroidHpStartMin: 30,
+            asteroidHpStartMax: 45,
+            asteroidHpRampEverySec: 10,
+            asteroidHpRampPerStep: 3,
+
+            enemyHpMult: 2.3,
+            enemyDamageMult: 1.7,
+            bossHpMult: 2.0,
+            bossDamageMult: 1.6
+        }
+    } as const
 } as const;
 
 

@@ -63,6 +63,7 @@ export class RunScene implements Scene {
         this.runtime.mount({
             width: this.width,
             height: this.height,
+            levelId: run?.levelId ?? this.levelId,
             asteroidsMaxCount: run?.stats.asteroidsMaxCount,
             asteroidsSpawnIntervalSec: run?.stats.asteroidsSpawnIntervalSec
         });

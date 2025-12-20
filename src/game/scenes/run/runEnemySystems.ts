@@ -1,5 +1,5 @@
 import type { Container } from 'pixi.js';
-import { getEnemyDef } from '../../enemies/enemyCatalog';
+import { getEnemyStatsForLevel } from '../../enemies/enemyCatalog';
 import { flashEnemy } from './runEffects';
 import { circleHit, lerp01, rotate, wrap } from './runMath';
 import { createEnemyBullet } from './runSpawn';
@@ -27,14 +27,14 @@ export function updateEnemiesAndFire(args: {
   height: number;
   shipX: number;
   shipY: number;
+  levelId: number;
   /** If false, enemies will move but will not shoot. */
   allowFire: boolean;
 }) {
-  const { enemies, enemyBullets, world, dt, width, height, shipX, shipY, allowFire } = args;
+  const { enemies, enemyBullets, world, dt, width, height, shipX, shipY, levelId, allowFire } = args;
 
   for (const e of enemies) {
-    const def = getEnemyDef(e.kind);
-    const stats = def.stats;
+    const stats = getEnemyStatsForLevel({ kind: e.kind, levelId });
 
     const dx = shipX - e.g.x;
     const dy = shipY - e.g.y;

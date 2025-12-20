@@ -1,3 +1,5 @@
+import { GAME_CONFIG } from '../../config/gameConfig';
+
 export type EnemyKind = 'scout' | 'fighter' | 'bomber';
 
 export type EnemyStats = {
@@ -35,7 +37,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
         spriteScale: 2.0,
         stats: {
             radiusPx: 14,
-            hp: 36,
+            hp: 6,
             accelPxPerSec2: 700,
             maxSpeedPxPerSec: 155,
             dampingPerSec: 2.3,
@@ -45,8 +47,8 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
             bulletSpeedPxPerSec: 290,
             bulletLifetimeSec: 1.35,
             bulletRadiusPx: 3,
-            bulletDamage: 36,
-            collisionDamage: 47
+            bulletDamage: 4,
+            collisionDamage: 8
         }
     },
     fighter: {
@@ -55,7 +57,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
         spriteScale: 1.0,
         stats: {
             radiusPx: 14,
-            hp: 60,
+            hp: 10,
             accelPxPerSec2: 520,
             maxSpeedPxPerSec: 120,
             dampingPerSec: 2.2,
@@ -65,8 +67,8 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
             bulletSpeedPxPerSec: 260,
             bulletLifetimeSec: 1.45,
             bulletRadiusPx: 3,
-            bulletDamage: 52,
-            collisionDamage: 62
+            bulletDamage: 6,
+            collisionDamage: 12
         }
     },
     bomber: {
@@ -75,7 +77,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
         spriteScale: 1.0,
         stats: {
             radiusPx: 15,
-            hp: 102,
+            hp: 18,
             accelPxPerSec2: 440,
             maxSpeedPxPerSec: 86,
             dampingPerSec: 2.1,
@@ -85,14 +87,39 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
             bulletSpeedPxPerSec: 220,
             bulletLifetimeSec: 1.65,
             bulletRadiusPx: 4,
-            bulletDamage: 83,
-            collisionDamage: 99
+            bulletDamage: 10,
+            collisionDamage: 18
         }
     }
 };
 
 export function getEnemyDef(kind: EnemyKind): EnemyDef {
     return ENEMY_DEFS[kind];
+}
+
+function getLevelBalance(levelId: number) {
+    if (levelId === 1 || levelId === 2) return GAME_CONFIG.levelBalance[levelId];
+
+    // Forward-compatible scaling for future levels (even if UI currently exposes only 1..2).
+    const base = GAME_CONFIG.levelBalance[2];
+    const extra = Math.max(0, Math.floor(levelId) - 2);
+    return {
+        ...base,
+        enemyHpMult: base.enemyHpMult * Math.pow(1.35, extra),
+        enemyDamageMult: base.enemyDamageMult * Math.pow(1.25, extra)
+    } as const;
+}
+
+export function getEnemyStatsForLevel(args: { kind: EnemyKind; levelId: number }): EnemyStats {
+    const def = getEnemyDef(args.kind);
+    const s = def.stats;
+    const lb = getLevelBalance(args.levelId);
+
+    const hp = Math.max(1, Math.round(s.hp * lb.enemyHpMult));
+    const bulletDamage = Math.max(1, Math.round(s.bulletDamage * lb.enemyDamageMult));
+    const collisionDamage = Math.max(1, Math.round(s.collisionDamage * lb.enemyDamageMult));
+
+    return { ...s, hp, bulletDamage, collisionDamage };
 }
 
 type Weighted<T extends string> = { item: T; weight: number };

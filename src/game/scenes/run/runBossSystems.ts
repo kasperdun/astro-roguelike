@@ -1,5 +1,5 @@
 import type { Container } from 'pixi.js';
-import { getBossDef } from '../../boss/bossCatalog';
+import { getBossStatsForLevel } from '../../boss/bossCatalog';
 import { spawnExplosion } from './runEffects';
 import { circleHit, lerp01, rotate, wrap } from './runMath';
 import { createBossBullet } from './runSpawn';
@@ -34,11 +34,11 @@ export function updateBossAndFire(args: {
   height: number;
   shipX: number;
   shipY: number;
+  levelId: number;
   allowFire: boolean;
 }) {
-  const { boss: b, bossBullets, world, dt, width, height, shipX, shipY, allowFire } = args;
-  const def = getBossDef(b.kind);
-  const s = def.stats;
+  const { boss: b, bossBullets, world, dt, width, height, shipX, shipY, levelId, allowFire } = args;
+  const s = getBossStatsForLevel({ kind: b.kind, levelId });
   const phase = phaseFromHp(b.hp, b.maxHp);
 
   const dx = shipX - b.g.x;

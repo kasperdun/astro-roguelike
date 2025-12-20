@@ -11,7 +11,7 @@ export const ECONOMY_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: -2, row: 1 },
         maxLevel: 6,
         requires: [{ id: 'weapon_damage', level: 1 }],
-        cost: { currency: 'minerals', base: 18, growth: 1.43 },
+        cost: { currency: 'minerals', base: 10, growth: 1.38 },
         perLevel: { asteroidMineralYieldBonus: 1 }
     },
     mining_mastery: {
@@ -21,7 +21,7 @@ export const ECONOMY_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: -4, row: 2 },
         maxLevel: 1,
         requires: [{ id: 'mining_yield', level: 4 }],
-        cost: { currency: 'minerals', base: 120, growth: 1.0 },
+        cost: { currency: 'minerals', base: 48, growth: 1.0 },
         perLevel: { asteroidMineralYieldBonus: 2 }
     },
 
@@ -32,7 +32,7 @@ export const ECONOMY_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: -4, row: 0 },
         maxLevel: 4,
         requires: [{ id: 'mining_yield', level: 2 }],
-        cost: { currency: 'minerals', base: 42, growth: 1.48 },
+        cost: { currency: 'minerals', base: 16, growth: 1.42 },
         perLevel: { asteroidSpawnIntervalReduction: 0.08 }
     },
     asteroid_max_count: {
@@ -42,7 +42,7 @@ export const ECONOMY_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: -6, row: 3 },
         maxLevel: 3,
         requires: [{ id: 'asteroid_spawn_rate', level: 2 }],
-        cost: { currency: 'minerals', base: 64, growth: 1.5 },
+        cost: { currency: 'minerals', base: 22, growth: 1.46 },
         perLevel: { asteroidsMaxCountBonus: 1 }
     },
     asteroid_explosion_damage: {
@@ -52,7 +52,7 @@ export const ECONOMY_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: -8, row: 4 },
         maxLevel: 4,
         requires: [{ id: 'asteroid_max_count', level: 1 }],
-        cost: { currency: 'minerals', base: 78, growth: 1.52 },
+        cost: { currency: 'minerals', base: 28, growth: 1.48 },
         perLevel: { asteroidExplosionDamageBonus: 18 }
     },
     asteroid_explosion_radius: {
@@ -62,7 +62,7 @@ export const ECONOMY_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: -8, row: 6 },
         maxLevel: 4,
         requires: [{ id: 'asteroid_explosion_damage', level: 1 }],
-        cost: { currency: 'minerals', base: 62, growth: 1.45 },
+        cost: { currency: 'minerals', base: 24, growth: 1.44 },
         perLevel: { asteroidExplosionRadiusBonusPx: 10 }
     },
     enemy_resource_yield: {
@@ -72,7 +72,7 @@ export const ECONOMY_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: -2, row: 3 },
         maxLevel: 5,
         requires: [{ id: 'mining_yield', level: 2 }],
-        cost: { currency: 'minerals', base: 34, growth: 1.47 },
+        cost: { currency: 'minerals', base: 14, growth: 1.42 },
         perLevel: { enemyMineralYieldBonus: 1 }
     },
     pickup_radius: {
@@ -82,7 +82,7 @@ export const ECONOMY_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: -1, row: 2 },
         maxLevel: 5,
         requires: [{ id: 'mining_yield', level: 2 }],
-        cost: { currency: 'minerals', base: 26, growth: 1.46 },
+        cost: { currency: 'minerals', base: 12, growth: 1.42 },
         perLevel: { pickupMagnetRadiusBonusPx: 8 }
     },
     magnet_drop_chance: {
@@ -92,7 +92,7 @@ export const ECONOMY_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: -4, row: 4 },
         maxLevel: 5,
         requires: [{ id: 'enemy_resource_yield', level: 1 }],
-        cost: { currency: 'minerals', base: 38, growth: 1.5 },
+        cost: { currency: 'minerals', base: 16, growth: 1.46 },
         perLevel: { magnetDropChanceBonus: 0.01 }
     }
 };

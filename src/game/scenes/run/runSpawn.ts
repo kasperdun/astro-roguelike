@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { GAME_CONFIG } from '../../../config/gameConfig';
-import { getEnemyDef, type EnemyKind } from '../../enemies/enemyCatalog';
-import { getBossDef, type BossKind } from '../../boss/bossCatalog';
+import { getEnemyDef, getEnemyStatsForLevel, type EnemyKind } from '../../enemies/enemyCatalog';
+import { getBossDef, getBossStatsForLevel, type BossKind } from '../../boss/bossCatalog';
 import { getRunAssets, preloadRunAssets, type RunAssets } from '../../runAssets';
 import { lerp, lerp01, randInt, rotate } from './runMath';
 import type { Asteroid, Boss, Enemy, EnemyBullet, Pickup, PickupKind } from './runTypes';
@@ -37,6 +37,8 @@ export function createAsteroid(args: {
     shipX: number;
     shipY: number;
     avoidShip: boolean;
+    hpAtMinRadius?: number;
+    hpAtMaxRadius?: number;
 }): Asteroid {
     const { width, height, shipX, shipY, avoidShip } = args;
 
@@ -114,8 +116,10 @@ export function createAsteroid(args: {
     g.x = x;
     g.y = y;
 
+    const hpMin = Math.max(1, Math.round(args.hpAtMinRadius ?? GAME_CONFIG.asteroidHpAtMinRadius));
+    const hpMax = Math.max(hpMin, Math.round(args.hpAtMaxRadius ?? GAME_CONFIG.asteroidHpAtMaxRadius));
     const t = lerp01((r - GAME_CONFIG.asteroidMinRadiusPx) / (GAME_CONFIG.asteroidMaxRadiusPx - GAME_CONFIG.asteroidMinRadiusPx));
-    const hp = Math.round(lerp(GAME_CONFIG.asteroidHpAtMinRadius, GAME_CONFIG.asteroidHpAtMaxRadius, t));
+    const hp = Math.round(lerp(hpMin, hpMax, t));
 
     const shouldSpin = Math.random() < GAME_CONFIG.asteroidSpinChance;
     const spinAbs =
@@ -163,20 +167,22 @@ export function createPickup(kind: PickupKind, amount: number, x: number, y: num
 
 export function createEnemy(args: { width: number; height: number; shipX: number; shipY: number; avoidShip: boolean }): Enemy {
     // Back-compat overload: default to fighter if caller hasn't been updated yet.
-    return createEnemyWithKind({ ...args, kind: 'fighter' });
+    return createEnemyWithKind({ ...args, kind: 'fighter', levelId: 1 });
 }
 
 export function createEnemyWithKind(args: {
     kind: EnemyKind;
+    levelId: number;
     width: number;
     height: number;
     shipX: number;
     shipY: number;
     avoidShip: boolean;
 }): Enemy {
-    const { kind, width, height, shipX, shipY, avoidShip } = args;
+    const { kind, levelId, width, height, shipX, shipY, avoidShip } = args;
 
     const def = getEnemyDef(kind);
+    const stats = getEnemyStatsForLevel({ kind, levelId });
     const assets = getRunAssets();
     // Collision size should be based on the sprite's opaque bounds (ignore transparent padding), like asteroids.
     // When assets aren't ready yet, fall back to a config-driven radius so gameplay still works.
@@ -246,7 +252,7 @@ export function createEnemyWithKind(args: {
     dirX = j.x;
     dirY = j.y;
 
-    const speed = Math.min(def.stats.maxSpeedPxPerSec, def.stats.maxSpeedPxPerSec * (0.55 + Math.random() * 0.35));
+    const speed = Math.min(stats.maxSpeedPxPerSec, stats.maxSpeedPxPerSec * (0.55 + Math.random() * 0.35));
     const vx = dirX * speed;
     const vy = dirY * speed;
 
@@ -256,20 +262,22 @@ export function createEnemyWithKind(args: {
     const seed = Math.random();
     const fireCooldownLeft = 0.6 + seed * 0.6;
 
-    return { g, kind, vx, vy, r, hp: def.stats.hp, fireCooldownLeft, seed };
+    return { g, kind, vx, vy, r, hp: stats.hp, fireCooldownLeft, seed };
 }
 
 export function createBossWithKind(args: {
     kind: BossKind;
+    levelId: number;
     width: number;
     height: number;
     shipX: number;
     shipY: number;
     avoidShip: boolean;
 }): Boss {
-    const { kind, width, height, shipX, shipY, avoidShip } = args;
+    const { kind, levelId, width, height, shipX, shipY, avoidShip } = args;
 
     const def = getBossDef(kind);
+    const stats = getBossStatsForLevel({ kind, levelId });
     const assets = getRunAssets();
     const r = assets ? bossRadiusFromTexture({ assets, kind, spriteScale: def.spriteScale }) : def.stats.radiusPx;
 
@@ -328,7 +336,7 @@ export function createBossWithKind(args: {
     dirX = j.x;
     dirY = j.y;
 
-    const speed = Math.min(def.stats.maxSpeedPxPerSec, def.stats.maxSpeedPxPerSec * (0.55 + Math.random() * 0.25));
+    const speed = Math.min(stats.maxSpeedPxPerSec, stats.maxSpeedPxPerSec * (0.55 + Math.random() * 0.25));
     const vx = dirX * speed;
     const vy = dirY * speed;
 
@@ -342,8 +350,8 @@ export function createBossWithKind(args: {
         vx,
         vy,
         r,
-        hp: def.stats.hp,
-        maxHp: def.stats.hp,
+        hp: stats.hp,
+        maxHp: stats.hp,
         mode: 'aimed',
         modeTimeLeft: 2.0,
         burstShotsLeft: 0,

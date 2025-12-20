@@ -11,8 +11,8 @@ export const DEFENSE_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 2, row: -1 },
         maxLevel: 5,
         requires: [{ id: 'weapon_damage', level: 1 }],
-        cost: { currency: 'minerals', base: 14, growth: 1.4 },
-        perLevel: { maxHpBonus: 15 }
+        cost: { currency: 'minerals', base: 8, growth: 1.34 },
+        perLevel: { maxHpBonus: 10 }
     },
     health_drop_chance: {
         title: 'Health Scavenging',
@@ -21,7 +21,7 @@ export const DEFENSE_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 2, row: -2 },
         maxLevel: 5,
         requires: [{ id: 'hull_hp', level: 1 }],
-        cost: { currency: 'minerals', base: 38, growth: 1.5 },
+        cost: { currency: 'minerals', base: 14, growth: 1.42 },
         perLevel: { healthDropChanceBonus: 0.05 }
     },
     collision_plating: {
@@ -31,7 +31,7 @@ export const DEFENSE_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 4, row: -2 },
         maxLevel: 4,
         requires: [{ id: 'hull_hp', level: 1 }],
-        cost: { currency: 'minerals', base: 24, growth: 1.44 },
+        cost: { currency: 'minerals', base: 10, growth: 1.40 },
         perLevel: { collisionDamageReduction: 0.06 }
     },
     shield_core: {
@@ -41,8 +41,8 @@ export const DEFENSE_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 4, row: 0 },
         maxLevel: 3,
         requires: [{ id: 'hull_hp', level: 2 }],
-        cost: { currency: 'minerals', base: 32, growth: 1.5 },
-        perLevel: { maxShieldBonus: 18 }
+        cost: { currency: 'minerals', base: 14, growth: 1.44 },
+        perLevel: { maxShieldBonus: 14 }
     },
     shield_regen: {
         title: 'Shield Regenerator',
@@ -51,8 +51,8 @@ export const DEFENSE_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 6, row: 1 },
         maxLevel: 4,
         requires: [{ id: 'shield_core', level: 1 }],
-        cost: { currency: 'minerals', base: 58, growth: 1.55 },
-        perLevel: { shieldRegenPerSec: 2.4 }
+        cost: { currency: 'minerals', base: 22, growth: 1.46 },
+        perLevel: { shieldRegenPerSec: 1.9 }
     },
     shield_delay: {
         title: 'Quick Reboot',
@@ -61,7 +61,7 @@ export const DEFENSE_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 6, row: -1 },
         maxLevel: 3,
         requires: [{ id: 'shield_core', level: 1 }],
-        cost: { currency: 'minerals', base: 52, growth: 1.52 },
+        cost: { currency: 'minerals', base: 20, growth: 1.44 },
         perLevel: { shieldRegenDelayBonusSec: -0.18 }
     },
     fortress_protocol: {
@@ -71,8 +71,8 @@ export const DEFENSE_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 8, row: 0 },
         maxLevel: 1,
         requires: [{ id: 'shield_regen', level: 3 }, { id: 'collision_plating', level: 3 }],
-        cost: { currency: 'minerals', base: 160, growth: 1.0 },
-        perLevel: { maxHpBonus: 35, maxShieldBonus: 25, collisionDamageReduction: 0.08 }
+        cost: { currency: 'minerals', base: 55, growth: 1.0 },
+        perLevel: { maxHpBonus: 28, maxShieldBonus: 22, collisionDamageReduction: 0.08 }
     }
 };
 

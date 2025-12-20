@@ -45,6 +45,7 @@ export function stepWorldAndCombat(args: {
             height: runtime.height,
             shipX,
             shipY,
+            levelId: runtime.levelId,
             allowFire: !runtime.ship.isWarpingIn
         });
     }
@@ -57,6 +58,7 @@ export function stepWorldAndCombat(args: {
         height: runtime.height,
         shipX,
         shipY,
+        levelId: runtime.levelId,
         allowFire: !runtime.ship.isWarpingIn
     });
 
@@ -223,7 +225,7 @@ export function stepWorldAndCombat(args: {
                 shipY,
                 shipR: GAME_CONFIG.shipCollisionRadiusPx,
                 onShipHit: () => {
-                    const dmg = damageFromShipBossCollision(runtime.boss!.kind);
+                    const dmg = damageFromShipBossCollision(runtime.boss!.kind, runtime.levelId);
                     runtime.shipInvulnLeft = GAME_CONFIG.shipInvulnAfterHitSec;
                     runtime.shieldRegenBlockedLeft = stats.shieldRegenDelaySec;
                     store.applyDamageToShip(dmg * stats.collisionDamageMultiplier);
@@ -245,7 +247,7 @@ export function stepWorldAndCombat(args: {
             shipY,
             shipR: GAME_CONFIG.shipCollisionRadiusPx,
             onShipHit: (e) => {
-                const dmg = damageFromShipEnemyCollision(e.kind);
+                const dmg = damageFromShipEnemyCollision(e.kind, runtime.levelId);
                 runtime.shipInvulnLeft = GAME_CONFIG.shipInvulnAfterHitSec;
                 runtime.shieldRegenBlockedLeft = stats.shieldRegenDelaySec;
                 store.applyDamageToShip(dmg * stats.collisionDamageMultiplier);

@@ -7,10 +7,12 @@ import { RunShipView } from './runShipView';
 import { RunPlayerWeapons } from './runPlayerWeapons';
 import { getRunAssets, type RunAssets } from '../../runAssets';
 import { pickEnemyKindForSpawn } from '../../enemies/enemyCatalog';
+import type { LevelId } from '../../../state/gameStore';
 
 export class RunRuntime {
     public width = 1;
     public height = 1;
+    public levelId: LevelId = 1;
 
     public readonly ship = new RunShipView();
     public readonly weapons = new RunPlayerWeapons();
@@ -48,11 +50,13 @@ export class RunRuntime {
     public mount(args: {
         width: number;
         height: number;
+        levelId: LevelId;
         asteroidsMaxCount?: number;
         asteroidsSpawnIntervalSec?: number;
     }) {
         this.width = args.width;
         this.height = args.height;
+        this.levelId = args.levelId;
 
         this.input.w = false;
         this.input.a = false;
@@ -130,13 +134,29 @@ export class RunRuntime {
         }
     }
 
+    private getAsteroidHpBandForSpawn(): { min: number; max: number } {
+        const levelId = this.levelId;
+        const lb = levelId === 1 || levelId === 2 ? GAME_CONFIG.levelBalance[levelId] : GAME_CONFIG.levelBalance[2];
+
+        // Step-wise ramp: every N seconds, newly spawned asteroids get +X HP.
+        const steps = lb.asteroidHpRampEverySec > 0 ? Math.floor(this.runTimeSec / lb.asteroidHpRampEverySec) : 0;
+        const extra = Math.max(0, steps) * lb.asteroidHpRampPerStep;
+
+        const min = Math.max(1, Math.round(lb.asteroidHpStartMin + extra));
+        const max = Math.max(min, Math.round(lb.asteroidHpStartMax + extra));
+        return { min, max };
+    }
+
     public spawnAsteroid(args: { avoidShip: boolean }) {
+        const hp = this.getAsteroidHpBandForSpawn();
         const a = createAsteroid({
             width: this.width,
             height: this.height,
             shipX: this.ship.sprite.x,
             shipY: this.ship.sprite.y,
-            avoidShip: args.avoidShip
+            avoidShip: args.avoidShip,
+            hpAtMinRadius: hp.min,
+            hpAtMaxRadius: hp.max
         });
         this.world.addChild(a.g);
         this.asteroids.push(a);
@@ -146,6 +166,7 @@ export class RunRuntime {
         const kind = pickEnemyKindForSpawn({ enemiesKilled: this.enemiesKilled, runTimeSec: this.runTimeSec });
         const e = createEnemyWithKind({
             kind,
+            levelId: this.levelId,
             width: this.width,
             height: this.height,
             shipX: this.ship.sprite.x,
@@ -165,6 +186,7 @@ export class RunRuntime {
 
         const boss = createBossWithKind({
             kind: args.kind,
+            levelId: this.levelId,
             width: this.width,
             height: this.height,
             shipX: this.ship.sprite.x,

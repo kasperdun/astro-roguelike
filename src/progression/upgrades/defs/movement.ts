@@ -11,7 +11,7 @@ export const MOVEMENT_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 0, row: -3 },
         maxLevel: 4,
         requires: [{ id: 'weapon_damage', level: 1 }],
-        cost: { currency: 'minerals', base: 16, growth: 1.43 },
+        cost: { currency: 'minerals', base: 8, growth: 1.36 },
         perLevel: { shipMaxSpeedBonusPxPerSec: 12 }
     },
     accel_control: {
@@ -21,7 +21,7 @@ export const MOVEMENT_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 2, row: -5 },
         maxLevel: 4,
         requires: [{ id: 'move_speed', level: 1 }],
-        cost: { currency: 'minerals', base: 26, growth: 1.46 },
+        cost: { currency: 'minerals', base: 12, growth: 1.40 },
         perLevel: { shipAccelMult: 0.08 }
     },
     drift_tuning: {
@@ -31,7 +31,7 @@ export const MOVEMENT_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 4, row: -5 },
         maxLevel: 1,
         requires: [{ id: 'accel_control', level: 2 }, { id: 'fuel_thrust_eff', level: 2 }],
-        cost: { currency: 'minerals', base: 110, growth: 1.0 },
+        cost: { currency: 'minerals', base: 45, growth: 1.0 },
         perLevel: { shipMaxSpeedBonusPxPerSec: 22, fuelDrainWhileThrustPerSecBonus: -0.35 }
     }
 };

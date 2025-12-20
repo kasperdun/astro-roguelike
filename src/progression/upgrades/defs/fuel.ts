@@ -11,7 +11,7 @@ export const FUEL_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 0, row: 2 },
         maxLevel: 5,
         requires: [{ id: 'weapon_damage', level: 1 }],
-        cost: { currency: 'minerals', base: 14, growth: 1.4 },
+        cost: { currency: 'minerals', base: 8, growth: 1.34 },
         perLevel: { maxFuelBonus: 8 }
     },
     fuel_efficiency: {
@@ -21,7 +21,7 @@ export const FUEL_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: -2, row: 4 },
         maxLevel: 4,
         requires: [{ id: 'fuel_capacity', level: 1 }],
-        cost: { currency: 'minerals', base: 24, growth: 1.46 },
+        cost: { currency: 'minerals', base: 10, growth: 1.40 },
         perLevel: { fuelDrainPerSecBonus: -0.10 }
     },
     fuel_thrust_eff: {
@@ -31,7 +31,7 @@ export const FUEL_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 0, row: 5 },
         maxLevel: 4,
         requires: [{ id: 'fuel_capacity', level: 2 }],
-        cost: { currency: 'minerals', base: 30, growth: 1.48 },
+        cost: { currency: 'minerals', base: 12, growth: 1.42 },
         perLevel: { fuelDrainWhileThrustPerSecBonus: -0.24 }
     },
     fuel_shot_eff: {
@@ -41,7 +41,7 @@ export const FUEL_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 2, row: 4 },
         maxLevel: 4,
         requires: [{ id: 'fuel_capacity', level: 2 }],
-        cost: { currency: 'minerals', base: 30, growth: 1.48 },
+        cost: { currency: 'minerals', base: 12, growth: 1.42 },
         perLevel: { fuelDrainPerShotBonus: -0.02 }
     },
     fuel_regen: {
@@ -51,7 +51,7 @@ export const FUEL_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: 0, row: 7 },
         maxLevel: 5,
         requires: [{ id: 'fuel_efficiency', level: 2 }],
-        cost: { currency: 'minerals', base: 62, growth: 1.55 },
+        cost: { currency: 'minerals', base: 22, growth: 1.48 },
         perLevel: { fuelRegenPerSec: 0.22 }
     },
     fuel_drop_chance: {
@@ -61,7 +61,7 @@ export const FUEL_UPGRADE_DEFS: Partial<UpgradeDefs> = {
         pos: { col: -1, row: 4 },
         maxLevel: 5,
         requires: [{ id: 'fuel_capacity', level: 2 }],
-        cost: { currency: 'minerals', base: 38, growth: 1.5 },
+        cost: { currency: 'minerals', base: 14, growth: 1.42 },
         perLevel: { fuelDropChanceBonus: 0.05 }
     }
 };

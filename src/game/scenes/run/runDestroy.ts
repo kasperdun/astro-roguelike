@@ -1,8 +1,8 @@
 import type { Container } from 'pixi.js';
 import { GAME_CONFIG } from '../../../config/gameConfig';
 import { deriveEconomyStats, type DerivedRunStats, type PurchasedUpgrades } from '../../../progression/upgrades';
-import { getEnemyDef } from '../../enemies/enemyCatalog';
-import { getBossDef } from '../../boss/bossCatalog';
+import { getEnemyStatsForLevel } from '../../enemies/enemyCatalog';
+import { getBossStatsForLevel } from '../../boss/bossCatalog';
 import { spawnAsteroidExplosion, spawnBossDestruction, spawnEnemyDestruction } from './runEffects';
 import { circleHit } from './runMath';
 import type { Asteroid, Boss, Enemy, PickupKind } from './runTypes';
@@ -127,12 +127,12 @@ export function destroyBoss(args: {
     for (let i = 0; i < Math.max(0, GAME_CONFIG.bossDropCores); i++) args.spawnPickup('core', 1, b.g.x, b.g.y);
 }
 
-export function damageFromShipEnemyCollision(enemyKind: Enemy['kind']): number {
-    return getEnemyDef(enemyKind).stats.collisionDamage;
+export function damageFromShipEnemyCollision(enemyKind: Enemy['kind'], levelId: number): number {
+    return getEnemyStatsForLevel({ kind: enemyKind, levelId }).collisionDamage;
 }
 
-export function damageFromShipBossCollision(bossKind: Boss['kind']): number {
-    return getBossDef(bossKind).stats.collisionDamage;
+export function damageFromShipBossCollision(bossKind: Boss['kind'], levelId: number): number {
+    return getBossStatsForLevel({ kind: bossKind, levelId }).collisionDamage;
 }
 
 
