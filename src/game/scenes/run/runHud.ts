@@ -24,41 +24,51 @@ function ratio(current: number, max: number): number {
 export type RunHudView = {
   root: Container;
   setScreenSize: (w: number, h: number) => void;
-  render: (args: { run: RunSession | null; levelId: LevelId }) => void;
+  render: (args: {
+    run: RunSession | null;
+    levelId: LevelId;
+    bossBar:
+      | { mode: 'hidden' }
+      | { mode: 'progress'; current: number; max: number; label: string; fillColor: number }
+      | { mode: 'boss'; current: number; max: number; label: string; fillColor: number };
+  }) => void;
   destroy: () => void;
 };
 
 export function createRunHudView(): RunHudView {
   const root = new Container();
 
+  const topLeft = new Container();
+  root.addChild(topLeft);
+
   const panel = new Graphics();
-  root.addChild(panel);
+  topLeft.addChild(panel);
 
   const title = new Text({
     text: '',
     style: { fill: 0xe8ecff, fontSize: 14, fontWeight: '600' }
   });
-  root.addChild(title);
+  topLeft.addChild(title);
 
   const noSession = new Text({
     text: '(no session)',
     style: { fill: 0xaab2d6, fontSize: 12 }
   });
-  root.addChild(noSession);
+  topLeft.addChild(noSession);
 
   const textSmallStyle = { fill: 0xbfc7ea, fontSize: 12 } as const;
   const mineralsText = new Text({ text: '', style: textSmallStyle });
   const scrapText = new Text({ text: '', style: textSmallStyle });
   const coresText = new Text({ text: '', style: textSmallStyle });
-  root.addChild(mineralsText);
-  root.addChild(scrapText);
-  root.addChild(coresText);
+  topLeft.addChild(mineralsText);
+  topLeft.addChild(scrapText);
+  topLeft.addChild(coresText);
 
   const controls = new Text({
     text: 'WASD: thrust   LMB: shoot   ESC: menu',
     style: { fill: 0x93a0d6, fontSize: 11 }
   });
-  root.addChild(controls);
+  topLeft.addChild(controls);
 
   const barW = 190;
   const barH = 12;
@@ -66,7 +76,7 @@ export function createRunHudView(): RunHudView {
   const hpRow = new Container();
   const shieldRow = new Container();
   const fuelRow = new Container();
-  root.addChild(hpRow, shieldRow, fuelRow);
+  topLeft.addChild(hpRow, shieldRow, fuelRow);
 
   function makeBarRow(labelText: string): {
     row: Container;
@@ -137,16 +147,29 @@ export function createRunHudView(): RunHudView {
   const fuelBar = makeBarRow('FUEL');
   fuelRow.addChild(fuelBar.row);
 
+  // Bottom boss/progress bar (pinned to bottom).
+  const bossRow = new Container();
+  const bossBg = new Graphics();
+  const bossFill = new Graphics();
+  const bossFrame = new Graphics();
+  const bossLabel = new Text({ text: '', style: { fill: 0xe8ecff, fontSize: 12, fontWeight: '600' } });
+  const bossValue = new Text({ text: '', style: { fill: 0xd7dcf2, fontSize: 12 } });
+  bossRow.addChild(bossBg, bossFill, bossFrame, bossLabel, bossValue);
+  root.addChild(bossRow);
+
   // Layout constants
   const padX = 16;
   const padY = 12;
   const panelPad = 10;
   const rowGap = 18;
 
+  let screenW = 1;
+  let screenH = 1;
+
   function layout() {
-    // Pin to top-left; if needed later we can clamp to avoid overlapping edges.
-    root.x = padX;
-    root.y = padY;
+    // Pin top-left panel to screen corner.
+    topLeft.x = padX;
+    topLeft.y = padY;
 
     title.x = panelPad;
     title.y = panelPad;
@@ -192,6 +215,30 @@ export function createRunHudView(): RunHudView {
     panel.clear();
     panel.rect(0, 0, panelW, panelH).fill({ color: 0x070a12, alpha: 0.45 });
     panel.rect(0, 0, panelW, panelH).stroke({ color: 0x2b3566, width: 1, alpha: 0.85 });
+
+    // Bottom boss/progress row (centered).
+    const barH2 = 12;
+    const w = Math.round(Math.max(320, Math.min(820, screenW - 40)));
+    const x = Math.round(screenW * 0.5 - w * 0.5);
+    const y2 = Math.round(screenH - 18 - barH2);
+    bossRow.x = x;
+    bossRow.y = y2;
+
+    bossLabel.x = 0;
+    bossLabel.y = -18;
+    bossValue.x = w;
+    bossValue.y = -18;
+    bossValue.anchor.set(1, 0);
+
+    bossBg.x = 0;
+    bossBg.y = 0;
+    bossFill.x = 0;
+    bossFill.y = 0;
+    bossFrame.x = 0;
+    bossFrame.y = 0;
+
+    // Drawn in render() so we can color + fill amount.
+    void w;
   }
 
   // Render state
@@ -207,10 +254,20 @@ export function createRunHudView(): RunHudView {
     scrap: number;
     cores: number;
     hasRun: boolean;
+    bossMode: 'hidden' | 'progress' | 'boss';
+    bossCurrent: number;
+    bossMax: number;
   } | null = null;
 
-  const render = (args: { run: RunSession | null; levelId: LevelId }) => {
-    const { run, levelId } = args;
+  const render = (args: {
+    run: RunSession | null;
+    levelId: LevelId;
+    bossBar:
+      | { mode: 'hidden' }
+      | { mode: 'progress'; current: number; max: number; label: string; fillColor: number }
+      | { mode: 'boss'; current: number; max: number; label: string; fillColor: number };
+  }) => {
+    const { run, levelId, bossBar } = args;
 
     if (!run) {
       title.text = `LEVEL ${levelId}`;
@@ -218,6 +275,7 @@ export function createRunHudView(): RunHudView {
       hpRow.visible = false;
       shieldRow.visible = false;
       fuelRow.visible = false;
+      bossRow.visible = false;
       mineralsText.text = '';
       scrapText.text = '';
       coresText.text = '';
@@ -238,7 +296,10 @@ export function createRunHudView(): RunHudView {
       minerals: run.minerals,
       scrap: run.scrap,
       cores: run.cores,
-      hasRun: true
+      hasRun: true,
+      bossMode: bossBar.mode,
+      bossCurrent: bossBar.mode === 'hidden' ? 0 : bossBar.current,
+      bossMax: bossBar.mode === 'hidden' ? 0 : bossBar.max
     } as const;
 
     // Cheap change detection: avoid redrawing when values didn't meaningfully change.
@@ -253,7 +314,10 @@ export function createRunHudView(): RunHudView {
       last.maxShield !== next.maxShield ||
       last.minerals !== next.minerals ||
       last.scrap !== next.scrap ||
-      last.cores !== next.cores;
+      last.cores !== next.cores ||
+      last.bossMode !== next.bossMode ||
+      Math.abs(last.bossCurrent - next.bossCurrent) >= 0.05 ||
+      last.bossMax !== next.bossMax;
 
     if (!changed) return;
     last = { ...next };
@@ -277,6 +341,26 @@ export function createRunHudView(): RunHudView {
     coresText.text = `CORES: ${run.cores}`;
 
     controls.visible = true;
+
+    bossRow.visible = bossBar.mode !== 'hidden';
+    if (bossBar.mode !== 'hidden') {
+      const barH2 = 12;
+      const w = Math.round(Math.max(320, Math.min(820, screenW - 40)));
+      const t = ratio(bossBar.current, bossBar.max);
+      const fillW = Math.round(w * t);
+
+      bossLabel.text = bossBar.mode === 'boss' ? `${bossBar.label} HP` : `${bossBar.label} CHARGE`;
+      bossValue.text = bossBar.mode === 'boss' ? `${Math.ceil(bossBar.current)}/${Math.ceil(bossBar.max)}` : `${Math.round(t * 100)}%`;
+
+      bossBg.clear();
+      bossBg.rect(0, 0, w, barH2).fill({ color: 0x070a12, alpha: 0.55 });
+
+      bossFill.clear();
+      if (fillW > 0) bossFill.rect(0, 0, fillW, barH2).fill({ color: bossBar.fillColor, alpha: 0.92 });
+
+      bossFrame.clear();
+      bossFrame.rect(0, 0, w, barH2).stroke({ color: 0x2b3566, width: 1, alpha: 0.9 });
+    }
     layout();
   };
 
@@ -285,8 +369,8 @@ export function createRunHudView(): RunHudView {
   return {
     root,
     setScreenSize: (w: number, h: number) => {
-      void w;
-      void h;
+      screenW = Math.max(1, w);
+      screenH = Math.max(1, h);
       layout();
     },
     render,
@@ -301,7 +385,11 @@ export function hookRunHud(args: { hud: RunHudView; getLevelId: () => LevelId })
 
   const renderHud = () => {
     const state = useGameStore.getState();
-    hud.render({ run: state.run, levelId: state.run?.levelId ?? getLevelId() });
+    hud.render({
+      run: state.run,
+      levelId: state.run?.levelId ?? getLevelId(),
+      bossBar: { mode: 'hidden' }
+    });
   };
 
   renderHud();

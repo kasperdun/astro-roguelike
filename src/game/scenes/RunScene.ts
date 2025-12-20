@@ -3,7 +3,7 @@ import type { Application, Ticker } from 'pixi.js';
 import { useGameStore, type LevelId } from '../../state/gameStore';
 import type { Scene } from '../core/Scene';
 import { installRunInput } from './run/runInput';
-import { createRunHudView, hookRunHud, type RunHudView } from './run/runHud';
+import { createRunHudView, type RunHudView } from './run/runHud';
 import { preloadRunAssets } from '../runAssets';
 import { layoutTilingBackground, pickRandomBackgroundTexture } from '../backgrounds';
 import { RunRuntime } from './run/runRuntime';
@@ -26,7 +26,6 @@ export class RunScene implements Scene {
     private height = 1;
 
     private tickerFn: ((t: Ticker) => void) | null = null;
-    private unsubStore: (() => void) | null = null;
     private unsubInput: (() => void) | null = null;
 
     public constructor(private readonly app: Application) { }
@@ -75,13 +74,14 @@ export class RunScene implements Scene {
             if (run) this.runtime?.ship.syncTextureFromHp(run.hp, run.maxHp, true);
         });
 
-        this.unsubStore = hookRunHud({ hud: this.hudView, getLevelId: () => this.levelId });
         this.unsubInput = installRunInput({ input: this.runtime.input });
 
         this.tickerFn = (t) => {
             const rt = this.runtime;
             if (!rt) return;
             tickRun(rt, t.deltaMS / 1000);
+            const run = useGameStore.getState().run;
+            this.hudView?.render({ run, levelId: run?.levelId ?? this.levelId, bossBar: rt.getBossBarState() });
         };
         this.app.ticker.add(this.tickerFn);
     }
@@ -90,9 +90,6 @@ export class RunScene implements Scene {
         this.bgLoadToken++;
         if (this.tickerFn) this.app.ticker.remove(this.tickerFn);
         this.tickerFn = null;
-
-        this.unsubStore?.();
-        this.unsubStore = null;
 
         this.unsubInput?.();
         this.unsubInput = null;

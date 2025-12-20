@@ -131,7 +131,7 @@ export function stepWorldAndCombat(args: {
                 stats: { magnetDropChance: stats.magnetDropChance },
                 spawnPickup: (kind, amount, x, y) => runtime.spawnPickup(kind, amount, x, y),
                 onEnemyKilled: () => {
-                    runtime.enemiesKilled++;
+                    runtime.registerEnemyKilled();
                     // Small feedback loop: kills speed up enemy spawns a bit (director).
                     runtime.enemySpawnTimerLeft = Math.min(runtime.enemySpawnTimerLeft, runtime.computeEnemySpawnIntervalSec());
                 }
@@ -146,6 +146,7 @@ export function stepWorldAndCombat(args: {
         bulletDamage: stats.bulletDamage,
         onBulletHit: () => audio.playHit(),
         onAsteroidDestroyed: (index) => {
+            runtime.registerAsteroidKilled();
             destroyAsteroid({
                 index,
                 world: runtime.world,
@@ -173,7 +174,7 @@ export function stepWorldAndCombat(args: {
                         stats: { magnetDropChance: stats.magnetDropChance },
                         spawnPickup: (kind, amount, x, y) => runtime.spawnPickup(kind, amount, x, y),
                         onEnemyKilled: () => {
-                            runtime.enemiesKilled++;
+                            runtime.registerEnemyKilled();
                             runtime.enemySpawnTimerLeft = Math.min(runtime.enemySpawnTimerLeft, runtime.computeEnemySpawnIntervalSec());
                         }
                     });

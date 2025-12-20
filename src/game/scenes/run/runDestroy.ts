@@ -27,6 +27,7 @@ export function destroyAsteroid(args: {
 
     args.asteroids.splice(args.index, 1);
     args.world.removeChild(a.g);
+    args.world.removeChild(a.hpBar);
 
     audio.playAsteroidDead();
     spawnAsteroidExplosion(args.world, a.g.x, a.g.y, a.r);
@@ -45,6 +46,7 @@ export function destroyAsteroid(args: {
             if (!e) continue;
             if (!circleHit(e.g.x, e.g.y, e.r, a.g.x, a.g.y, explosionR)) continue;
             e.hp -= explosionDamage;
+            e.hpBarVisible = true;
             if (e.hp <= 0) args.onEnemyDestroyed(ei);
         }
     }
@@ -77,6 +79,7 @@ export function destroyEnemy(args: {
 
     args.enemies.splice(args.index, 1);
     args.world.removeChild(e.g);
+    args.world.removeChild(e.hpBar);
     args.onEnemyKilled();
 
     audio.playHit();

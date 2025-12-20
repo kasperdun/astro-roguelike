@@ -7,6 +7,45 @@ import type { Asteroid, Pickup, Projectile } from './runTypes';
 import { getRunAssets } from '../../runAssets';
 import { alphaMaskHitCircle } from './runAlphaHit';
 
+function hpRatio(current: number, max: number): number {
+    if (!Number.isFinite(current) || !Number.isFinite(max) || max <= 0) return 0;
+    return Math.max(0, Math.min(1, current / max));
+}
+
+function lerpColor(a: number, b: number, t: number): number {
+    const tt = Math.max(0, Math.min(1, t));
+    const ar = (a >> 16) & 0xff;
+    const ag = (a >> 8) & 0xff;
+    const ab = a & 0xff;
+    const br = (b >> 16) & 0xff;
+    const bg = (b >> 8) & 0xff;
+    const bb = b & 0xff;
+    const r = Math.round(ar + (br - ar) * tt);
+    const g = Math.round(ag + (bg - ag) * tt);
+    const b2 = Math.round(ab + (bb - ab) * tt);
+    return (r << 16) | (g << 8) | b2;
+}
+
+function renderAsteroidHpBar(a: Asteroid) {
+    a.hpBar.visible = a.hpBarVisible;
+    if (!a.hpBar.visible) return;
+
+    a.hpBar.x = a.g.x;
+    a.hpBar.y = a.g.y - a.r - 14;
+    a.hpBar.rotation = 0;
+
+    const w = Math.round(Math.max(30, Math.min(86, a.r * 2.2)));
+    const h = 5;
+    const t = hpRatio(a.hp, a.maxHp);
+    const fillW = Math.round(w * t);
+    const fillColor = lerpColor(0xe84a5f, 0x3ee89a, t);
+
+    a.hpBar.clear();
+    a.hpBar.rect(-w / 2, -h / 2, w, h).fill({ color: 0x0b1020, alpha: 0.75 });
+    if (fillW > 0) a.hpBar.rect(-w / 2, -h / 2, fillW, h).fill({ color: fillColor, alpha: 0.95 });
+    a.hpBar.rect(-w / 2, -h / 2, w, h).stroke({ color: 0x2b3566, width: 1, alpha: 0.9 });
+}
+
 export function updateProjectiles(args: {
     projectiles: Projectile[];
     world: Container;
@@ -41,6 +80,7 @@ export function updateAsteroids(args: { asteroids: Asteroid[]; dt: number; width
         a.g.y += a.vy * dt;
         if (a.spinRadPerSec !== 0) a.g.rotation += a.spinRadPerSec * dt;
         wrap(a.g, width, height, a.r);
+        renderAsteroidHpBar(a);
     }
 }
 
@@ -132,6 +172,7 @@ export function resolveBulletAsteroidCollisions(args: {
             hit = true;
 
             a.hp -= bulletDamage;
+            a.hpBarVisible = true;
             flashAsteroid(a.g);
             onBulletHit?.();
 

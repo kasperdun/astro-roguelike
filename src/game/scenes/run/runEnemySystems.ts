@@ -8,6 +8,46 @@ import { updateProjectiles } from './runUpdateSystems';
 import { getRunAssets } from '../../runAssets';
 import { alphaMaskHitCircle } from './runAlphaHit';
 
+function hpRatio(current: number, max: number): number {
+  if (!Number.isFinite(current) || !Number.isFinite(max) || max <= 0) return 0;
+  return lerp01(current / max);
+}
+
+function lerpColor(a: number, b: number, t: number): number {
+  const tt = lerp01(t);
+  const ar = (a >> 16) & 0xff;
+  const ag = (a >> 8) & 0xff;
+  const ab = a & 0xff;
+  const br = (b >> 16) & 0xff;
+  const bg = (b >> 8) & 0xff;
+  const bb = b & 0xff;
+  const r = Math.round(ar + (br - ar) * tt);
+  const g = Math.round(ag + (bg - ag) * tt);
+  const b2 = Math.round(ab + (bb - ab) * tt);
+  return (r << 16) | (g << 8) | b2;
+}
+
+function renderEnemyHpBar(e: Enemy) {
+  e.hpBar.visible = e.hpBarVisible;
+  if (!e.hpBar.visible) return;
+
+  // World-space bar above the enemy; doesn't inherit rotation.
+  e.hpBar.x = e.g.x;
+  e.hpBar.y = e.g.y - e.r - 14;
+  e.hpBar.rotation = 0;
+
+  const w = Math.round(Math.max(26, Math.min(72, e.r * 2.4)));
+  const h = 5;
+  const t = hpRatio(e.hp, e.maxHp);
+  const fillW = Math.round(w * t);
+  const fillColor = lerpColor(0xe84a5f, 0x3ee89a, t);
+
+  e.hpBar.clear();
+  e.hpBar.rect(-w / 2, -h / 2, w, h).fill({ color: 0x0b1020, alpha: 0.75 });
+  if (fillW > 0) e.hpBar.rect(-w / 2, -h / 2, fillW, h).fill({ color: fillColor, alpha: 0.95 });
+  e.hpBar.rect(-w / 2, -h / 2, w, h).stroke({ color: 0x2b3566, width: 1, alpha: 0.9 });
+}
+
 export function updateEnemyBullets(args: {
   bullets: EnemyBullet[];
   world: Container;
@@ -89,6 +129,8 @@ export function updateEnemiesAndFire(args: {
     // Enemy sprites have the nose pointing up, while Pixi's rotation=0 points right.
     e.g.rotation = Math.atan2(dy, dx) + Math.PI / 2;
 
+    renderEnemyHpBar(e);
+
     // Fire control.
     e.fireCooldownLeft = Math.max(0, e.fireCooldownLeft - dt);
     if (!allowFire) continue;
@@ -149,6 +191,7 @@ export function resolveBulletEnemyCollisions(args: {
       hit = true;
 
       e.hp -= bulletDamage;
+      e.hpBarVisible = true;
       flashEnemy(e.g);
       onBulletHit?.();
 

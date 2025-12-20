@@ -38,7 +38,12 @@ export class RunRuntime {
     public spawnTimerLeft = 0;
     public enemySpawnTimerLeft = 0;
     public enemiesKilled = 0;
+    public asteroidsKilled = 0;
     public runTimeSec = 0;
+
+    /** Boss progress accumulated from kills before the boss spawns. */
+    public bossProgress = 0;
+    public bossProgressMax = GAME_CONFIG.bossProgressRequired;
 
     public readonly input = { w: false, a: false, s: false, d: false, firing: false };
 
@@ -85,7 +90,11 @@ export class RunRuntime {
         this.spawnTimerLeft = 0;
         this.enemySpawnTimerLeft = 0;
         this.enemiesKilled = 0;
+        this.asteroidsKilled = 0;
         this.runTimeSec = 0;
+
+        this.bossProgress = 0;
+        this.bossProgressMax = GAME_CONFIG.bossProgressRequired;
 
         this.ship.resetTweens();
         this.ship.build({ width: this.width, height: this.height, assets: getRunAssets() ?? null });
@@ -159,6 +168,7 @@ export class RunRuntime {
             hpAtMaxRadius: hp.max
         });
         this.world.addChild(a.g);
+        this.world.addChild(a.hpBar);
         this.asteroids.push(a);
     }
 
@@ -174,12 +184,16 @@ export class RunRuntime {
             avoidShip: args.avoidShip
         });
         this.world.addChild(e.g);
+        this.world.addChild(e.hpBar);
         this.enemies.push(e);
     }
 
     public spawnBoss(args: { kind: Boss['kind']; avoidShip: boolean }) {
         // Clear combat clutter to make the encounter readable.
-        for (const e of this.enemies) this.world.removeChild(e.g);
+        for (const e of this.enemies) {
+            this.world.removeChild(e.g);
+            this.world.removeChild(e.hpBar);
+        }
         this.enemies = [];
         for (const b of this.enemyBullets) this.world.removeChild(b.g);
         this.enemyBullets = [];
@@ -195,6 +209,33 @@ export class RunRuntime {
         });
         this.world.addChild(boss.g);
         this.boss = boss;
+    }
+
+    public registerEnemyKilled() {
+        this.enemiesKilled++;
+        this.addBossProgress(GAME_CONFIG.bossProgressPerEnemyKill);
+    }
+
+    public registerAsteroidKilled() {
+        this.asteroidsKilled++;
+        this.addBossProgress(GAME_CONFIG.bossProgressPerAsteroidKill);
+    }
+
+    private addBossProgress(delta: number) {
+        if (this.boss || this.bossDefeated) return;
+        if (!Number.isFinite(delta) || delta <= 0) return;
+        this.bossProgress = Math.min(this.bossProgressMax, this.bossProgress + delta);
+    }
+
+    public getBossBarState():
+        | { mode: 'hidden' }
+        | { mode: 'progress'; current: number; max: number; label: string; fillColor: number }
+        | { mode: 'boss'; current: number; max: number; label: string; fillColor: number } {
+        if (this.boss) {
+            return { mode: 'boss', current: this.boss.hp, max: this.boss.maxHp, label: 'BOSS', fillColor: 0xff4ad2 };
+        }
+        if (this.bossDefeated) return { mode: 'hidden' };
+        return { mode: 'progress', current: this.bossProgress, max: this.bossProgressMax, label: 'BOSS', fillColor: 0xffb020 };
     }
 
     public spawnPickup(kind: PickupKind, amount: number, x: number, y: number) {

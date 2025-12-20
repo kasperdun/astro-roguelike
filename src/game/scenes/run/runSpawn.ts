@@ -127,7 +127,10 @@ export function createAsteroid(args: {
         Math.random() * Math.max(0, GAME_CONFIG.asteroidSpinMaxRadPerSec - GAME_CONFIG.asteroidSpinMinRadPerSec);
     const spinRadPerSec = shouldSpin ? spinAbs * (Math.random() < 0.5 ? -1 : 1) : 0;
 
-    return { g, vx, vy, r, hp, spinRadPerSec };
+    const hpBar = new Graphics();
+    hpBar.visible = false;
+
+    return { g, vx, vy, r, hp, maxHp: hp, spinRadPerSec, hpBar, hpBarVisible: false };
 }
 
 export function createPickup(kind: PickupKind, amount: number, x: number, y: number): Pickup {
@@ -262,7 +265,22 @@ export function createEnemyWithKind(args: {
     const seed = Math.random();
     const fireCooldownLeft = 0.6 + seed * 0.6;
 
-    return { g, kind, vx, vy, r, hp: stats.hp, fireCooldownLeft, seed };
+    const hpBar = new Graphics();
+    hpBar.visible = false;
+
+    return {
+        g,
+        kind,
+        vx,
+        vy,
+        r,
+        hp: stats.hp,
+        maxHp: stats.hp,
+        fireCooldownLeft,
+        seed,
+        hpBar,
+        hpBarVisible: false
+    };
 }
 
 export function createBossWithKind(args: {

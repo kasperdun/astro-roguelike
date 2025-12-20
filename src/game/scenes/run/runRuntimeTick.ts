@@ -92,7 +92,7 @@ export function tickRun(runtime: RunRuntime, dtRaw: number) {
     }
 
     // Boss spawn condition: after N enemy kills.
-    if (!runtime.boss && !runtime.bossDefeated && runtime.enemiesKilled >= GAME_CONFIG.bossSpawnAfterEnemiesKilled) {
+    if (!runtime.boss && !runtime.bossDefeated && runtime.bossProgress >= runtime.bossProgressMax) {
         runtime.spawnBoss({ kind: 'dreadnought', avoidShip: true });
     }
 
