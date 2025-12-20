@@ -32,7 +32,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     scout: {
         kind: 'scout',
         displayName: 'Scout',
-        spriteScale: 1.0,
+        spriteScale: 2.0,
         stats: {
             radiusPx: 14,
             hp: 36,

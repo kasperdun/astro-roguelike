@@ -41,6 +41,9 @@ export function createAsteroid(args: {
     const baseTex = assets?.asteroidBase ?? Texture.EMPTY;
     const g = new Sprite(baseTex);
     g.anchor.set(0.5);
+
+    // Randomize initial visual orientation so asteroids don't look identical on spawn.
+    g.rotation = Math.random() * Math.PI * 2;
     if (assets) {
         applyAsteroidSpriteSize(g, r, assets);
     } else {
@@ -107,7 +110,13 @@ export function createAsteroid(args: {
     const t = lerp01((r - GAME_CONFIG.asteroidMinRadiusPx) / (GAME_CONFIG.asteroidMaxRadiusPx - GAME_CONFIG.asteroidMinRadiusPx));
     const hp = Math.round(lerp(GAME_CONFIG.asteroidHpAtMinRadius, GAME_CONFIG.asteroidHpAtMaxRadius, t));
 
-    return { g, vx, vy, r, hp };
+    const shouldSpin = Math.random() < GAME_CONFIG.asteroidSpinChance;
+    const spinAbs =
+        GAME_CONFIG.asteroidSpinMinRadPerSec +
+        Math.random() * Math.max(0, GAME_CONFIG.asteroidSpinMaxRadPerSec - GAME_CONFIG.asteroidSpinMinRadPerSec);
+    const spinRadPerSec = shouldSpin ? spinAbs * (Math.random() < 0.5 ? -1 : 1) : 0;
+
+    return { g, vx, vy, r, hp, spinRadPerSec };
 }
 
 export function createPickup(kind: PickupKind, amount: number, x: number, y: number): Pickup {

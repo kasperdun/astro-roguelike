@@ -15,6 +15,8 @@ export type Asteroid = {
     vy: number;
     r: number;
     hp: number;
+    /** Angular velocity (rad/s). 0 means no rotation. */
+    spinRadPerSec: number;
 };
 
 export type Bullet = Projectile;

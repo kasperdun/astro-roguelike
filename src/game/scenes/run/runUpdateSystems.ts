@@ -4,6 +4,8 @@ import { flashAsteroid } from './runEffects';
 import { applyBulletImpulseToAsteroid } from './runAsteroidImpulse';
 import { circleHit, wrap } from './runMath';
 import type { Asteroid, Pickup, Projectile } from './runTypes';
+import { getRunAssets } from '../../runAssets';
+import { alphaMaskHitCircle } from './runAlphaHit';
 
 export function updateProjectiles(args: {
     projectiles: Projectile[];
@@ -37,6 +39,7 @@ export function updateAsteroids(args: { asteroids: Asteroid[]; dt: number; width
     for (const a of asteroids) {
         a.g.x += a.vx * dt;
         a.g.y += a.vy * dt;
+        if (a.spinRadPerSec !== 0) a.g.rotation += a.spinRadPerSec * dt;
         wrap(a.g, width, height, a.r);
     }
 }
@@ -108,6 +111,8 @@ export function resolveBulletAsteroidCollisions(args: {
     onAsteroidDestroyed: (index: number) => void;
 }) {
     const { bullets, asteroids, world, bulletDamage, onAsteroidDestroyed, onBulletHit } = args;
+    const assets = getRunAssets();
+    const asteroidMask = assets?.asteroidBaseAlphaMask ?? null;
 
     for (let bi = bullets.length - 1; bi >= 0; bi--) {
         const b = bullets[bi];
@@ -117,6 +122,7 @@ export function resolveBulletAsteroidCollisions(args: {
             const a = asteroids[ai];
             if (!a) continue;
             if (!circleHit(b.g.x, b.g.y, b.r, a.g.x, a.g.y, a.r)) continue;
+            if (asteroidMask && !alphaMaskHitCircle({ target: a.g, mask: asteroidMask, worldX: b.g.x, worldY: b.g.y, worldR: b.r })) continue;
 
             // bullet consumed
             world.removeChild(b.g);

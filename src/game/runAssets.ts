@@ -26,6 +26,8 @@ export type RunAssets = {
   asteroidBase: Texture;
   /** Diameter (px) of the *opaque* (alpha>threshold) area inside asteroidBase texture. */
   asteroidBaseOpaqueDiameterPx: number;
+  /** Alpha mask (1 byte per pixel, 1 = opaque) for asteroidBase (frame-sized). */
+  asteroidBaseAlphaMask: AlphaMask;
   asteroidExplodeFrames: Texture[];
   enemy: Record<
     EnemyKind,
@@ -33,9 +35,18 @@ export type RunAssets = {
       base: Texture;
       /** Diameter (px) of the *opaque* (alpha>threshold) area inside base texture. */
       baseOpaqueDiameterPx: number;
+      /** Alpha mask (1 byte per pixel, 1 = opaque) for base (frame-sized). */
+      baseAlphaMask: AlphaMask;
       destructionFrames: Texture[];
     }
   >;
+};
+
+export type AlphaMask = {
+  w: number;
+  h: number;
+  /** Row-major, length = w*h. Each cell is 0 (transparent) or 1 (opaque). */
+  data: Uint8Array;
 };
 
 let runAssets: RunAssets | null = null;
@@ -45,41 +56,47 @@ export function getRunAssets(): RunAssets | null {
   return runAssets;
 }
 
-function computeOpaqueBoundsPx(args: { texture: Texture; alphaThreshold?: number }): { w: number; h: number } {
-  const { texture, alphaThreshold = 1 } = args;
-  const src = texture.source;
-  const res = src.resource as unknown;
-  const w = src.pixelWidth || src.width;
-  const h = src.pixelHeight || src.height;
-  if (!w || !h) return { w: texture.width, h: texture.height };
+function buildAlphaMaskAndOpaqueBounds(args: { texture: Texture; alphaThreshold?: number }): { mask: AlphaMask; opaque: { w: number; h: number } } {
+  const { texture, alphaThreshold = 8 } = args;
 
-  // If we can't read pixels, fall back to full texture size (still functional, just less accurate).
+  const src = texture.source;
+  const res = src.resource as unknown as CanvasImageSource;
+  const frame = texture.frame;
+
+  const fw = Math.max(1, Math.round(frame.width));
+  const fh = Math.max(1, Math.round(frame.height));
+  const fx = Math.round(frame.x);
+  const fy = Math.round(frame.y);
+
+  const mask: AlphaMask = { w: fw, h: fh, data: new Uint8Array(fw * fh) };
+
+  // If we can't read pixels, fall back to "fully opaque" mask so gameplay remains stable.
+  // (This still avoids early hits from transparent padding only if we can actually read pixels.)
   try {
     const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = fw;
+    canvas.height = fh;
     const ctx = canvas.getContext('2d', { willReadFrequently: true } as unknown as CanvasRenderingContext2DSettings);
-    if (!ctx) return { w, h };
+    if (!ctx) throw new Error('no 2d context');
 
-    // drawImage supports HTMLImageElement, HTMLCanvasElement, ImageBitmap, OffscreenCanvas (when available).
-    ctx.clearRect(0, 0, w, h);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ctx.drawImage(res as any, 0, 0, w, h);
+    ctx.clearRect(0, 0, fw, fh);
+    ctx.drawImage(res, fx, fy, fw, fh, 0, 0, fw, fh);
 
-    const img = ctx.getImageData(0, 0, w, h);
+    const img = ctx.getImageData(0, 0, fw, fh);
     const data = img.data;
 
-    let minX = w;
-    let minY = h;
+    let minX = fw;
+    let minY = fh;
     let maxX = -1;
     let maxY = -1;
 
-    // Scan alpha channel.
-    for (let y = 0; y < h; y++) {
-      const row = y * w * 4;
-      for (let x = 0; x < w; x++) {
+    for (let y = 0; y < fh; y++) {
+      const row = y * fw * 4;
+      const outRow = y * fw;
+      for (let x = 0; x < fw; x++) {
         const a = data[row + x * 4 + 3] ?? 0;
         if (a < alphaThreshold) continue;
+        mask.data[outRow + x] = 1;
         if (x < minX) minX = x;
         if (y < minY) minY = y;
         if (x > maxX) maxX = x;
@@ -87,11 +104,15 @@ function computeOpaqueBoundsPx(args: { texture: Texture; alphaThreshold?: number
       }
     }
 
-    if (maxX < 0 || maxY < 0) return { w, h }; // fully transparent? shouldn't happen
+    if (maxX < 0 || maxY < 0) {
+      return { mask, opaque: { w: fw, h: fh } };
+    }
 
-    return { w: maxX - minX + 1, h: maxY - minY + 1 };
+    return { mask, opaque: { w: maxX - minX + 1, h: maxY - minY + 1 } };
   } catch {
-    return { w, h };
+    // Mark everything as opaque so collisions remain consistent even if pixel reads fail.
+    mask.data.fill(1);
+    return { mask, opaque: { w: fw, h: fh } };
   }
 }
 
@@ -125,8 +146,8 @@ export function preloadRunAssets(): Promise<RunAssets> {
       Assets.load<Texture>(enemyBomberDestroySheetUrl)
     ]);
 
-    const opaque = computeOpaqueBoundsPx({ texture: asteroidBase, alphaThreshold: 8 });
-    const asteroidBaseOpaqueDiameterPx = Math.max(1, Math.max(opaque.w, opaque.h));
+    const asteroidMask = buildAlphaMaskAndOpaqueBounds({ texture: asteroidBase, alphaThreshold: 8 });
+    const asteroidBaseOpaqueDiameterPx = Math.max(1, Math.max(asteroidMask.opaque.w, asteroidMask.opaque.h));
 
     const w = explodeSheet.source.width;
     const h = explodeSheet.source.height;
@@ -159,25 +180,32 @@ export function preloadRunAssets(): Promise<RunAssets> {
       return frames;
     }
 
-    function baseOpaqueDiameterPx(base: Texture): number {
-      const opaque = computeOpaqueBoundsPx({ texture: base, alphaThreshold: 8 });
-      return Math.max(1, Math.max(opaque.w, opaque.h));
+    function baseMaskAndOpaqueDiameter(base: Texture): { mask: AlphaMask; diameterPx: number } {
+      const built = buildAlphaMaskAndOpaqueBounds({ texture: base, alphaThreshold: 8 });
+      return { mask: built.mask, diameterPx: Math.max(1, Math.max(built.opaque.w, built.opaque.h)) };
     }
+
+    const scoutMask = baseMaskAndOpaqueDiameter(enemyScoutBase);
+    const fighterMask = baseMaskAndOpaqueDiameter(enemyFighterBase);
+    const bomberMask = baseMaskAndOpaqueDiameter(enemyBomberBase);
 
     const enemy = {
       scout: {
         base: enemyScoutBase,
-        baseOpaqueDiameterPx: baseOpaqueDiameterPx(enemyScoutBase),
+        baseOpaqueDiameterPx: scoutMask.diameterPx,
+        baseAlphaMask: scoutMask.mask,
         destructionFrames: buildSheetFrames({ sheet: enemyScoutDestroySheet, frameW: enemyScoutBase.source.width })
       },
       fighter: {
         base: enemyFighterBase,
-        baseOpaqueDiameterPx: baseOpaqueDiameterPx(enemyFighterBase),
+        baseOpaqueDiameterPx: fighterMask.diameterPx,
+        baseAlphaMask: fighterMask.mask,
         destructionFrames: buildSheetFrames({ sheet: enemyFighterDestroySheet, frameW: enemyFighterBase.source.width })
       },
       bomber: {
         base: enemyBomberBase,
-        baseOpaqueDiameterPx: baseOpaqueDiameterPx(enemyBomberBase),
+        baseOpaqueDiameterPx: bomberMask.diameterPx,
+        baseAlphaMask: bomberMask.mask,
         destructionFrames: buildSheetFrames({ sheet: enemyBomberDestroySheet, frameW: enemyBomberBase.source.width })
       }
     } as const satisfies RunAssets['enemy'];
@@ -189,6 +217,7 @@ export function preloadRunAssets(): Promise<RunAssets> {
       shipVeryDamaged,
       asteroidBase,
       asteroidBaseOpaqueDiameterPx,
+      asteroidBaseAlphaMask: asteroidMask.mask,
       asteroidExplodeFrames,
       enemy
     };

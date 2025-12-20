@@ -4,8 +4,6 @@ import { assetUrl } from './assetUrl';
 
 type BackgroundUrl = string;
 
-// NOTE: Keep this list explicit (no import.meta.glob) so we don't "discover" files dynamically.
-// If you add/remove backgrounds in `assets/Backgrounds`, update this array.
 const BACKGROUND_URLS: readonly BackgroundUrl[] = Object.freeze([
     assetUrl('Backgrounds/Blue_Nebula_01-1024x1024.png'),
     assetUrl('Backgrounds/Blue_Nebula_02-1024x1024.png'),

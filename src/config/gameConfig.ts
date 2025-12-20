@@ -80,6 +80,15 @@ export const GAME_CONFIG = {
     /** HP астероида при максимальном радиусе (линейно растёт от min radius). */
     asteroidHpAtMaxRadius: 120,
 
+    /** Шанс, что астероид будет вращаться (0..1). */
+    asteroidSpinChance: 0.55,
+
+    /** Минимальная модульная скорость вращения астероида (рад/сек). */
+    asteroidSpinMinRadPerSec: 0.35,
+
+    /** Максимальная модульная скорость вращения астероида (рад/сек). */
+    asteroidSpinMaxRadPerSec: 1.65,
+
     /** Минимальная скорость астероида (px/s). */
     asteroidMinSpeedPxPerSec: 18,
 

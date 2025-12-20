@@ -5,6 +5,8 @@ import { circleHit, lerp01, rotate, wrap } from './runMath';
 import { createEnemyBullet } from './runSpawn';
 import type { Enemy, EnemyBullet, Projectile } from './runTypes';
 import { updateProjectiles } from './runUpdateSystems';
+import { getRunAssets } from '../../runAssets';
+import { alphaMaskHitCircle } from './runAlphaHit';
 
 export function updateEnemyBullets(args: {
   bullets: EnemyBullet[];
@@ -128,6 +130,7 @@ export function resolveBulletEnemyCollisions(args: {
   onEnemyDestroyed: (index: number) => void;
 }) {
   const { bullets, enemies, world, bulletDamage, onEnemyDestroyed, onBulletHit } = args;
+  const assets = getRunAssets();
 
   for (let bi = bullets.length - 1; bi >= 0; bi--) {
     const b = bullets[bi];
@@ -137,6 +140,8 @@ export function resolveBulletEnemyCollisions(args: {
       const e = enemies[ei];
       if (!e) continue;
       if (!circleHit(b.g.x, b.g.y, b.r, e.g.x, e.g.y, e.r)) continue;
+      const mask = assets?.enemy[e.kind]?.baseAlphaMask;
+      if (mask && !alphaMaskHitCircle({ target: e.g, mask, worldX: b.g.x, worldY: b.g.y, worldR: b.r })) continue;
 
       // bullet consumed
       world.removeChild(b.g);
@@ -184,8 +189,11 @@ export function resolveShipEnemyCollisions(args: {
   onPushOut: (nx: number, ny: number, overlap: number) => void;
 }) {
   const { enemies, shipX, shipY, shipR, onShipHit, onPushOut } = args;
+  const assets = getRunAssets();
   for (const e of enemies) {
     if (!circleHit(shipX, shipY, shipR, e.g.x, e.g.y, e.r)) continue;
+    const mask = assets?.enemy[e.kind]?.baseAlphaMask;
+    if (mask && !alphaMaskHitCircle({ target: e.g, mask, worldX: shipX, worldY: shipY, worldR: shipR })) continue;
 
     onShipHit(e);
 
