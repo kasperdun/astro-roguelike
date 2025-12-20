@@ -6,15 +6,10 @@ export type RunInputState = {
   firing: boolean;
 };
 
-export function installRunInput(args: { input: RunInputState; onEscape: () => void }): () => void {
-  const { input, onEscape } = args;
+export function installRunInput(args: { input: RunInputState }): () => void {
+  const { input } = args;
 
   const onKey = (e: KeyboardEvent, down: boolean) => {
-    if (e.code === 'Escape' && down) {
-      onEscape();
-      return;
-    }
-
     // Use physical key codes so WASD works on any keyboard layout.
     if (e.code === 'KeyW') input.w = down;
     if (e.code === 'KeyA') input.a = down;

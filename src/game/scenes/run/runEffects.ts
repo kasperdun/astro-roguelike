@@ -1,6 +1,7 @@
 import { gsap } from 'gsap';
 import { AnimatedSprite, Container, Graphics } from 'pixi.js';
 import { preloadRunAssets } from '../../runAssets';
+import type { EnemyKind } from '../../enemies/enemyCatalog';
 import { lerp } from './runMath';
 
 // Start loading early.
@@ -80,6 +81,42 @@ export function spawnAsteroidExplosion(parent: Container, x: number, y: number, 
 
     anim.loop = false;
     anim.animationSpeed = 0.9;
+    anim.onComplete = () => {
+      parent.removeChild(anim);
+      anim.destroy();
+    };
+
+    parent.addChild(anim);
+    anim.play();
+  });
+}
+
+export function spawnEnemyDestruction(parent: Container, args: { x: number; y: number; r: number; kind: EnemyKind; rotationRad: number }) {
+  // Immediate feedback ring (also acts as fallback if sheet can't load).
+  spawnExplosion(parent, args.x, args.y, args.r);
+
+  void preloadRunAssets().then((assets) => {
+    const frames = assets.enemy[args.kind].destructionFrames;
+    if (!frames.length) return;
+
+    const anim = new AnimatedSprite(frames);
+    anim.anchor.set(0.5);
+    anim.x = args.x;
+    anim.y = args.y;
+    anim.rotation = args.rotationRad;
+
+    // Visual size: a bit larger than collision radius so it reads well.
+    const size = args.r * 3.0;
+    anim.width = size;
+    anim.height = size;
+
+    anim.loop = false;
+    // Make the destruction readable: keep ~constant perceived duration across sheets with different frame counts.
+    // AnimatedSprite advances `animationSpeed` frames per tick; at 60fps, duration ≈ framesCount / (animationSpeed * 60).
+    const desiredDurationSec = 1.05;
+    const fps = 60;
+    const speed = frames.length / Math.max(1, desiredDurationSec * fps);
+    anim.animationSpeed = Math.min(1.0, Math.max(0.12, speed));
     anim.onComplete = () => {
       parent.removeChild(anim);
       anim.destroy();

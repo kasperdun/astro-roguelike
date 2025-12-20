@@ -1,20 +1,22 @@
 import { gsap } from 'gsap';
-import { Container, Graphics, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture, TilingSprite } from 'pixi.js';
 import type { Application, Ticker } from 'pixi.js';
 import { GAME_CONFIG } from '../../config/gameConfig';
 import { useGameStore, type LevelId } from '../../state/gameStore';
 import { deriveEconomyStats } from '../../progression/upgrades';
 import type { Scene } from '../core/Scene';
-import { spawnAsteroidExplosion, spawnExplosion } from './run/runEffects';
+import { spawnAsteroidExplosion, spawnEnemyDestruction, spawnExplosion } from './run/runEffects';
 import { installRunInput } from './run/runInput';
 import { createRunHudView, hookRunHud, type RunHudView } from './run/runHud';
 import { circleHit, clampDt } from './run/runMath';
 import type { Asteroid, Bullet, Enemy, EnemyBullet, Pickup, PickupKind } from './run/runTypes';
-import { applyAsteroidSpriteSize, createAsteroid, createEnemy, createPickup } from './run/runSpawn';
+import { applyAsteroidSpriteSize, createAsteroid, createEnemyWithKind, createPickup } from './run/runSpawn';
 import { resolveBulletAsteroidCollisions, updateAsteroids, updateBullets, updatePickups } from './run/runUpdateSystems';
 import { advanceShipKinematics } from './run/runShipKinematics';
 import { audio } from '../../audio/audio';
 import { getRunAssets, preloadRunAssets, type RunAssets } from '../runAssets';
+import { layoutTilingBackground, pickRandomBackgroundTexture } from '../backgrounds';
+import { getEnemyDef, pickEnemyKindForSpawn } from '../enemies/enemyCatalog';
 import {
     resolveBulletEnemyCollisions,
     resolveEnemyBulletShipCollisions,
@@ -29,8 +31,10 @@ export class RunScene implements Scene {
     public readonly id = 'run' as const;
 
     private readonly root = new Container();
+    private readonly bg = new TilingSprite({ texture: Texture.EMPTY, width: 1, height: 1 });
     private readonly world = new Container();
     private readonly hud = new Container();
+    private bgLoadToken = 0;
 
     private readonly ship = new Sprite();
     private hudView: RunHudView | null = null;
@@ -88,6 +92,15 @@ export class RunScene implements Scene {
         this.input.d = false;
         this.input.firing = false;
 
+        const token = ++this.bgLoadToken;
+        this.bg.texture = Texture.EMPTY;
+        void pickRandomBackgroundTexture().then((tex) => {
+            if (token !== this.bgLoadToken) return;
+            if (!tex) return;
+            this.bg.texture = tex;
+        });
+
+        this.root.addChild(this.bg);
         this.root.addChild(this.world);
         this.root.addChild(this.hud);
         this.app.stage.addChild(this.root);
@@ -124,13 +137,14 @@ export class RunScene implements Scene {
         this.buildInitialAsteroids();
         this.warpIn();
         this.unsubStore = hookRunHud({ hud: this.hudView, getLevelId: () => this.levelId });
-        this.unsubInput = installRunInput({ input: this.input, onEscape: () => useGameStore.getState().endRunToMenu() });
+        this.unsubInput = installRunInput({ input: this.input });
 
         this.tickerFn = (t) => this.update(clampDt(t.deltaMS / 1000));
         this.app.ticker.add(this.tickerFn);
     }
 
     unmount() {
+        this.bgLoadToken++;
         if (this.tickerFn) this.app.ticker.remove(this.tickerFn);
         this.tickerFn = null;
 
@@ -172,6 +186,7 @@ export class RunScene implements Scene {
     resize(width: number, height: number) {
         this.width = width;
         this.height = height;
+        layoutTilingBackground(this.bg, width, height);
         this.hudView?.setScreenSize(width, height);
     }
 
@@ -277,6 +292,7 @@ export class RunScene implements Scene {
 
     private update(dt: number) {
         const store = useGameStore.getState();
+        if (store.escapeDialogOpen) return;
         const run = store.run;
         if (!run) return;
         const stats = run.stats;
@@ -407,10 +423,10 @@ export class RunScene implements Scene {
                 shipX,
                 shipY,
                 shipR: GAME_CONFIG.shipCollisionRadiusPx,
-                onShipHit: () => {
+                onShipHit: (b) => {
                     this.shipInvulnLeft = GAME_CONFIG.shipInvulnAfterHitSec;
                     this.shieldRegenBlockedLeft = stats.shieldRegenDelaySec;
-                    store.applyDamageToShip(GAME_CONFIG.enemyBulletDamage * stats.collisionDamageMultiplier);
+                    store.applyDamageToShip(b.damage * stats.collisionDamageMultiplier);
                     audio.playHit();
                 }
             });
@@ -424,10 +440,11 @@ export class RunScene implements Scene {
                 shipX,
                 shipY,
                 shipR: GAME_CONFIG.shipCollisionRadiusPx,
-                onShipHit: () => {
+                onShipHit: (e) => {
+                    const dmg = getEnemyDef(e.kind).stats.collisionDamage;
                     this.shipInvulnLeft = GAME_CONFIG.shipInvulnAfterHitSec;
                     this.shieldRegenBlockedLeft = stats.shieldRegenDelaySec;
-                    store.applyDamageToShip(GAME_CONFIG.enemyCollisionDamage * stats.collisionDamageMultiplier);
+                    store.applyDamageToShip(dmg * stats.collisionDamageMultiplier);
                     audio.playHit();
                 },
                 onPushOut: (nx, ny, overlap) => {
@@ -535,7 +552,9 @@ export class RunScene implements Scene {
     }
 
     private spawnEnemy(args: { avoidShip: boolean }) {
-        const e = createEnemy({
+        const kind = pickEnemyKindForSpawn({ enemiesKilled: this.enemiesKilled, runTimeSec: this.runTimeSec });
+        const e = createEnemyWithKind({
+            kind,
             width: this.width,
             height: this.height,
             shipX: this.ship.x,
@@ -619,7 +638,7 @@ export class RunScene implements Scene {
         this.enemySpawnTimerLeft = Math.min(this.enemySpawnTimerLeft, this.computeEnemySpawnIntervalSec());
 
         audio.playHit();
-        spawnExplosion(this.world, e.g.x, e.g.y, e.r);
+        spawnEnemyDestruction(this.world, { x: e.g.x, y: e.g.y, r: e.r, kind: e.kind, rotationRad: e.g.rotation });
 
         const purchased = useGameStore.getState().purchasedUpgrades;
         const economy = deriveEconomyStats(purchased);

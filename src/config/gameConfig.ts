@@ -141,45 +141,6 @@ export const GAME_CONFIG = {
     /** Минимально возможный интервал спавна врагов (сек). */
     enemiesSpawnIntervalMinSec: 2.6,
 
-    /** Радиус врага для коллизий (в пикселях). */
-    enemyRadiusPx: 14,
-
-    /** HP врага (база). */
-    enemyHp: 60,
-
-    /** Ускорение врага (px/s^2). Определяет “агрессивность” перемещения. */
-    enemyAccelPxPerSec2: 520,
-
-    /** Максимальная скорость врага (px/s). */
-    enemyMaxSpeedPxPerSec: 120,
-
-    /** Демпфирование скорости врага (1/s). Чем больше — тем быстрее “гасит” инерцию. */
-    enemyDampingPerSec: 2.2,
-
-    /** Предпочитаемая дистанция врага до корабля (px). Враг пытается держать её в бою. */
-    enemyPreferredRangePx: 210,
-
-    /** Ширина “мертвой зоны” вокруг preferredRange (px), чтобы враг не дрожал. */
-    enemyRangeHysteresisPx: 35,
-
-    /** Базовая частота стрельбы врага (выстрелов в секунду). */
-    enemyFireRatePerSec: 1.05,
-
-    /** Скорость пули врага (px/s). */
-    enemyBulletSpeedPxPerSec: 260,
-
-    /** Время жизни пули врага (сек). */
-    enemyBulletLifetimeSec: 1.45,
-
-    /** Радиус пули врага для коллизий (px). */
-    enemyBulletRadiusPx: 3,
-
-    /** Урон пули врага по кораблю. */
-    enemyBulletDamage: 52,
-
-    /** Урон кораблю при столкновении с врагом. */
-    enemyCollisionDamage: 62,
-
     /** Сколько минералов выпадает за убитого врага (база). */
     enemyDropMineralsPerEnemy: 6,
 

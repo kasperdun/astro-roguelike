@@ -63,6 +63,11 @@ type GameState = {
     /** True after we loaded & applied save data once. */
     hasHydrated: boolean;
 
+    musicEnabled: boolean;
+    sfxEnabled: boolean;
+
+    escapeDialogOpen: boolean;
+
     /** Минералы в "банке" (meta-прогресс). Тратятся на апгрейды. */
     bankMinerals: number;
     /** Скрап в "банке" (meta-прогресс). Пока не используется (заложено под крафт). */
@@ -78,6 +83,13 @@ type GameState = {
     startRun: () => void;
     endRunToMenu: () => void;
     hydrateFromSave: (save: SaveV1) => void;
+
+    setMusicEnabled: (enabled: boolean) => void;
+    setSfxEnabled: (enabled: boolean) => void;
+
+    openEscapeDialog: () => void;
+    closeEscapeDialog: () => void;
+    toggleEscapeDialog: () => void;
 
     addMinerals: (amount: number) => void;
     addScrap: (amount: number) => void;
@@ -98,6 +110,8 @@ function autosaveProgress(get: () => GameState) {
     const save = buildSaveFromState({
         bankMinerals: s.bankMinerals,
         bankScrap: s.bankScrap,
+        musicEnabled: s.musicEnabled,
+        sfxEnabled: s.sfxEnabled,
         purchasedUpgrades: s.purchasedUpgrades,
         unlockedLevels: s.unlockedLevels,
         selectedLevelId: s.selectedLevelId,
@@ -116,6 +130,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     run: null,
     hasHydrated: false,
 
+    musicEnabled: true,
+    sfxEnabled: true,
+
+    escapeDialogOpen: false,
+
     bankMinerals: 0,
     bankScrap: 0,
     purchasedUpgrades: {},
@@ -132,6 +151,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
         set({
             mode: 'run',
+            escapeDialogOpen: false,
             run: {
                 levelId: selectedLevelId,
                 hp: derived.startHp,
@@ -170,10 +190,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     endRunToMenu: () => {
         set((s) => {
             const run = s.run;
-            if (!run) return { mode: 'menu', run: null };
+            if (!run) return { mode: 'menu', run: null, escapeDialogOpen: false };
             return {
                 mode: 'menu',
                 run: null,
+                escapeDialogOpen: false,
                 bankMinerals: s.bankMinerals + run.minerals,
                 bankScrap: s.bankScrap + run.scrap
             };
@@ -182,16 +203,37 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     hydrateFromSave: (save: SaveV1) =>
-        set((s) => ({
-            ...s,
-            hasHydrated: true,
-            bankMinerals: save.bankMinerals,
-            bankScrap: save.bankScrap,
-            purchasedUpgrades: save.purchasedUpgrades,
-            unlockedLevels: { 1: save.unlockedLevels['1'], 2: save.unlockedLevels['2'] },
-            selectedLevelId: save.selectedLevelId,
-            upgradeTreeViewport: save.upgradeTreeViewport
-        })),
+        set((s) => {
+            audio.setMusicEnabled(save.musicEnabled);
+            audio.setSfxEnabled(save.sfxEnabled);
+            return {
+                ...s,
+                hasHydrated: true,
+                bankMinerals: save.bankMinerals,
+                bankScrap: save.bankScrap,
+                musicEnabled: save.musicEnabled,
+                sfxEnabled: save.sfxEnabled,
+                purchasedUpgrades: save.purchasedUpgrades,
+                unlockedLevels: { 1: save.unlockedLevels['1'], 2: save.unlockedLevels['2'] },
+                selectedLevelId: save.selectedLevelId,
+                upgradeTreeViewport: save.upgradeTreeViewport
+            };
+        }),
+
+    setMusicEnabled: (enabled) => {
+        set({ musicEnabled: enabled });
+        audio.setMusicEnabled(enabled);
+        autosaveProgress(get);
+    },
+    setSfxEnabled: (enabled) => {
+        set({ sfxEnabled: enabled });
+        audio.setSfxEnabled(enabled);
+        autosaveProgress(get);
+    },
+
+    openEscapeDialog: () => set({ escapeDialogOpen: true }),
+    closeEscapeDialog: () => set({ escapeDialogOpen: false }),
+    toggleEscapeDialog: () => set((s) => ({ escapeDialogOpen: !s.escapeDialogOpen })),
 
     addMinerals: (amount) =>
         set((s) => (s.run ? { run: { ...s.run, minerals: s.run.minerals + amount } } : s)),

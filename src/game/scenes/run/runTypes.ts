@@ -1,4 +1,5 @@
 import type { Container, Graphics } from 'pixi.js';
+import type { EnemyKind } from '../../enemies/enemyCatalog';
 
 export type Projectile = {
     g: Graphics;
@@ -17,10 +18,13 @@ export type Asteroid = {
 };
 
 export type Bullet = Projectile;
-export type EnemyBullet = Projectile;
+export type EnemyBullet = Projectile & {
+    damage: number;
+};
 
 export type Enemy = {
-    g: Graphics;
+    g: Container;
+    kind: EnemyKind;
     vx: number;
     vy: number;
     r: number;

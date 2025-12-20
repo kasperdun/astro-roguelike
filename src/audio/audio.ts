@@ -56,11 +56,23 @@ class AudioManager {
     private lastPickupAtMs = -Infinity;
     private sfxPools = new Map<string, HTMLAudioElement[]>();
 
+    private musicEnabled = true;
+    private sfxEnabled = true;
+
     /**
      * Browsers can block autoplay until the first user gesture.
      * We treat any UI-triggered SFX as a "gesture" and try to (re)start music then.
      */
     private hadUserGesture = false;
+
+    public setMusicEnabled(enabled: boolean) {
+        this.musicEnabled = enabled;
+        void this.applyBackgroundMusic();
+    }
+
+    public setSfxEnabled(enabled: boolean) {
+        this.sfxEnabled = enabled;
+    }
 
     public setBackgroundMusic(kind: MusicKind | null) {
         this.desiredMusicKind = kind;
@@ -75,42 +87,50 @@ class AudioManager {
 
     public playMenuClick() {
         this.markUserGesture();
+        if (!this.sfxEnabled) return;
         this.playSfx('click');
     }
 
     public playWarp() {
         this.markUserGesture();
+        if (!this.sfxEnabled) return;
         this.playSfx('warp');
     }
 
     public playLaser() {
         // Likely already unlocked by user gesture (mouse/keyboard), but it's safe.
         this.markUserGesture();
+        if (!this.sfxEnabled) return;
         this.playSfx('laser');
     }
 
     public playHit() {
         this.markUserGesture();
+        if (!this.sfxEnabled) return;
         this.playSfx('hit');
     }
 
     public playShipDead() {
         this.markUserGesture();
+        if (!this.sfxEnabled) return;
         this.playSfx('ship_dead');
     }
 
     public playAsteroidDead() {
         this.markUserGesture();
+        if (!this.sfxEnabled) return;
         this.playSfx('asteroid_dead');
     }
 
     public playEnemyShoot() {
         this.markUserGesture();
+        if (!this.sfxEnabled) return;
         this.playSfx('enemy_shoot');
     }
 
     public playPickupPop() {
         this.markUserGesture();
+        if (!this.sfxEnabled) return;
 
         const now = performance.now();
         if (now - this.lastPickupAtMs < 35) return;
@@ -147,7 +167,7 @@ class AudioManager {
     private async applyBackgroundMusic() {
         const reqId = ++this.musicRequestId;
         const desired = this.desiredMusicKind;
-        if (!desired) {
+        if (!desired || !this.musicEnabled) {
             this.stopMusic();
             return;
         }

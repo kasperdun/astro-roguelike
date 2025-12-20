@@ -16,6 +16,8 @@ export function createDefaultSave(): SaveV1 {
     version: SAVE_VERSION,
     bankMinerals: 0,
     bankScrap: 0,
+    musicEnabled: true,
+    sfxEnabled: true,
     purchasedUpgrades: {},
     unlockedLevels: { 1: true, 2: false },
     selectedLevelId: 1,
@@ -49,6 +51,10 @@ function sanitizeUnlockedLevels(raw: unknown): SaveV1['unlockedLevels'] {
     1: typeof r['1'] === 'boolean' ? r['1'] : base[1],
     2: typeof r['2'] === 'boolean' ? r['2'] : base[2]
   };
+}
+
+function sanitizeBool(raw: unknown, fallback: boolean): boolean {
+  return typeof raw === 'boolean' ? raw : fallback;
 }
 
 function sanitizeSelectedLevelId(raw: unknown, unlockedLevels: SaveV1['unlockedLevels']): SaveV1['selectedLevelId'] {
@@ -90,6 +96,8 @@ export function migrateToLatest(raw: unknown): SaveV1 {
     version: SAVE_VERSION,
     bankMinerals: typeof r.bankMinerals === 'number' && Number.isFinite(r.bankMinerals) ? Math.max(0, r.bankMinerals) : 0,
     bankScrap: typeof r.bankScrap === 'number' && Number.isFinite(r.bankScrap) ? Math.max(0, r.bankScrap) : 0,
+    musicEnabled: sanitizeBool(r.musicEnabled, base.musicEnabled),
+    sfxEnabled: sanitizeBool(r.sfxEnabled, base.sfxEnabled),
     purchasedUpgrades: sanitizePurchasedUpgrades(r.purchasedUpgrades),
     unlockedLevels,
     selectedLevelId: sanitizeSelectedLevelId(r.selectedLevelId, unlockedLevels),
@@ -118,6 +126,8 @@ export async function saveGame(save: SaveV1): Promise<void> {
 export function buildSaveFromState(args: {
   bankMinerals: number;
   bankScrap: number;
+  musicEnabled: boolean;
+  sfxEnabled: boolean;
   purchasedUpgrades: PurchasedUpgrades;
   unlockedLevels: Record<number, boolean>;
   selectedLevelId: number;
@@ -139,6 +149,8 @@ export function buildSaveFromState(args: {
     version: SAVE_VERSION,
     bankMinerals: Math.max(0, Number.isFinite(args.bankMinerals) ? args.bankMinerals : 0),
     bankScrap: Math.max(0, Number.isFinite(args.bankScrap) ? args.bankScrap : 0),
+    musicEnabled: sanitizeBool(args.musicEnabled, true),
+    sfxEnabled: sanitizeBool(args.sfxEnabled, true),
     purchasedUpgrades,
     unlockedLevels,
     selectedLevelId,

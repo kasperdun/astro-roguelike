@@ -1,4 +1,5 @@
 import { Assets, Rectangle, Texture } from 'pixi.js';
+import type { EnemyKind } from './enemies/enemyCatalog';
 
 // Vite will turn these into correct runtime URLs (dev: /@fs or /assets, build: hashed).
 import shipFullUrl from '../../assets/Main Ship - Bases/PNGs/Main Ship - Base - Full health.png?url';
@@ -9,6 +10,14 @@ import shipVeryDamagedUrl from '../../assets/Main Ship - Bases/PNGs/Main Ship - 
 import asteroidBaseUrl from '../../assets/Asteroids/PNGs/Asteroid 01 - Base.png?url';
 import asteroidExplodeSheetUrl from '../../assets/Asteroids/PNGs/Asteroid 01 - Explode.png?url';
 
+import enemyScoutBaseUrl from '../../assets/Enemies/Nautolan Ship - Scout - Base.png?url';
+import enemyFighterBaseUrl from '../../assets/Enemies/Nautolan Ship - Fighter - Base.png?url';
+import enemyBomberBaseUrl from '../../assets/Enemies/Nautolan Ship - Bomber - Base.png?url';
+
+import enemyScoutDestroySheetUrl from '../../assets/Enemies/Destruction/Nautolan Ship - Scout.png?url';
+import enemyFighterDestroySheetUrl from '../../assets/Enemies/Destruction/Nautolan Ship - Fighter.png?url';
+import enemyBomberDestroySheetUrl from '../../assets/Enemies/Destruction/Nautolan Ship - Bomber.png?url';
+
 export type RunAssets = {
   shipFull: Texture;
   shipSlight: Texture;
@@ -18,6 +27,15 @@ export type RunAssets = {
   /** Diameter (px) of the *opaque* (alpha>threshold) area inside asteroidBase texture. */
   asteroidBaseOpaqueDiameterPx: number;
   asteroidExplodeFrames: Texture[];
+  enemy: Record<
+    EnemyKind,
+    {
+      base: Texture;
+      /** Diameter (px) of the *opaque* (alpha>threshold) area inside base texture. */
+      baseOpaqueDiameterPx: number;
+      destructionFrames: Texture[];
+    }
+  >;
 };
 
 let runAssets: RunAssets | null = null;
@@ -79,13 +97,32 @@ function computeOpaqueBoundsPx(args: { texture: Texture; alphaThreshold?: number
 
 export function preloadRunAssets(): Promise<RunAssets> {
   runAssetsPromise ??= (async () => {
-    const [shipFull, shipSlight, shipDamaged, shipVeryDamaged, asteroidBase, explodeSheet] = await Promise.all([
+    const [
+      shipFull,
+      shipSlight,
+      shipDamaged,
+      shipVeryDamaged,
+      asteroidBase,
+      explodeSheet,
+      enemyScoutBase,
+      enemyFighterBase,
+      enemyBomberBase,
+      enemyScoutDestroySheet,
+      enemyFighterDestroySheet,
+      enemyBomberDestroySheet
+    ] = await Promise.all([
       Assets.load<Texture>(shipFullUrl),
       Assets.load<Texture>(shipSlightUrl),
       Assets.load<Texture>(shipDamagedUrl),
       Assets.load<Texture>(shipVeryDamagedUrl),
       Assets.load<Texture>(asteroidBaseUrl),
-      Assets.load<Texture>(asteroidExplodeSheetUrl)
+      Assets.load<Texture>(asteroidExplodeSheetUrl),
+      Assets.load<Texture>(enemyScoutBaseUrl),
+      Assets.load<Texture>(enemyFighterBaseUrl),
+      Assets.load<Texture>(enemyBomberBaseUrl),
+      Assets.load<Texture>(enemyScoutDestroySheetUrl),
+      Assets.load<Texture>(enemyFighterDestroySheetUrl),
+      Assets.load<Texture>(enemyBomberDestroySheetUrl)
     ]);
 
     const opaque = computeOpaqueBoundsPx({ texture: asteroidBase, alphaThreshold: 8 });
@@ -105,6 +142,46 @@ export function preloadRunAssets(): Promise<RunAssets> {
       );
     }
 
+    function buildSheetFrames(args: { sheet: Texture; frameW: number }): Texture[] {
+      const sw = args.sheet.source.width;
+      const sh = args.sheet.source.height;
+      const fw = Math.max(1, Math.floor(args.frameW));
+      const count = Math.max(1, Math.floor(sw / fw));
+      const frames: Texture[] = [];
+      for (let i = 0; i < count; i++) {
+        frames.push(
+          new Texture({
+            source: args.sheet.source,
+            frame: new Rectangle(i * fw, 0, fw, sh)
+          })
+        );
+      }
+      return frames;
+    }
+
+    function baseOpaqueDiameterPx(base: Texture): number {
+      const opaque = computeOpaqueBoundsPx({ texture: base, alphaThreshold: 8 });
+      return Math.max(1, Math.max(opaque.w, opaque.h));
+    }
+
+    const enemy = {
+      scout: {
+        base: enemyScoutBase,
+        baseOpaqueDiameterPx: baseOpaqueDiameterPx(enemyScoutBase),
+        destructionFrames: buildSheetFrames({ sheet: enemyScoutDestroySheet, frameW: enemyScoutBase.source.width })
+      },
+      fighter: {
+        base: enemyFighterBase,
+        baseOpaqueDiameterPx: baseOpaqueDiameterPx(enemyFighterBase),
+        destructionFrames: buildSheetFrames({ sheet: enemyFighterDestroySheet, frameW: enemyFighterBase.source.width })
+      },
+      bomber: {
+        base: enemyBomberBase,
+        baseOpaqueDiameterPx: baseOpaqueDiameterPx(enemyBomberBase),
+        destructionFrames: buildSheetFrames({ sheet: enemyBomberDestroySheet, frameW: enemyBomberBase.source.width })
+      }
+    } as const satisfies RunAssets['enemy'];
+
     runAssets = {
       shipFull,
       shipSlight,
@@ -112,7 +189,8 @@ export function preloadRunAssets(): Promise<RunAssets> {
       shipVeryDamaged,
       asteroidBase,
       asteroidBaseOpaqueDiameterPx,
-      asteroidExplodeFrames
+      asteroidExplodeFrames,
+      enemy
     };
     return runAssets;
   })();

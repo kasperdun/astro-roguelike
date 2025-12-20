@@ -1,5 +1,6 @@
-import { Graphics, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { GAME_CONFIG } from '../../../config/gameConfig';
+import { getEnemyDef, type EnemyKind } from '../../enemies/enemyCatalog';
 import { getRunAssets, preloadRunAssets, type RunAssets } from '../../runAssets';
 import { lerp, lerp01, randInt, rotate } from './runMath';
 import type { Asteroid, Enemy, EnemyBullet, Pickup, PickupKind } from './runTypes';
@@ -15,6 +16,12 @@ export function applyAsteroidSpriteSize(sprite: Sprite, r: number, assets: RunAs
     const baseDiameter = Math.max(1, assets.asteroidBaseOpaqueDiameterPx);
     const s = desiredDiameter / baseDiameter;
     sprite.scale.set(s);
+}
+
+function enemyRadiusFromTexture(args: { assets: RunAssets; kind: EnemyKind; spriteScale: number }): number {
+    const baseDiameter = Math.max(1, args.assets.enemy[args.kind].baseOpaqueDiameterPx);
+    const scaledDiameter = baseDiameter * Math.max(0.001, args.spriteScale);
+    return scaledDiameter / 2;
 }
 
 export function createAsteroid(args: {
@@ -136,18 +143,44 @@ export function createPickup(kind: PickupKind, amount: number, x: number, y: num
 }
 
 export function createEnemy(args: { width: number; height: number; shipX: number; shipY: number; avoidShip: boolean }): Enemy {
-    const { width, height, shipX, shipY, avoidShip } = args;
+    // Back-compat overload: default to fighter if caller hasn't been updated yet.
+    return createEnemyWithKind({ ...args, kind: 'fighter' });
+}
 
-    const r = GAME_CONFIG.enemyRadiusPx;
-    const g = new Graphics();
-    // Simple diamond-like enemy silhouette.
-    g.moveTo(r, 0)
-        .lineTo(0, r * 0.85)
-        .lineTo(-r * 0.85, 0)
-        .lineTo(0, -r * 0.85)
-        .closePath()
-        .fill({ color: 0xff7c7c, alpha: 0.95 })
-        .stroke({ color: 0x3a0f18, width: 2, alpha: 0.9 });
+export function createEnemyWithKind(args: {
+    kind: EnemyKind;
+    width: number;
+    height: number;
+    shipX: number;
+    shipY: number;
+    avoidShip: boolean;
+}): Enemy {
+    const { kind, width, height, shipX, shipY, avoidShip } = args;
+
+    const def = getEnemyDef(kind);
+    const assets = getRunAssets();
+    // Collision size should be based on the sprite's opaque bounds (ignore transparent padding), like asteroids.
+    // When assets aren't ready yet, fall back to a config-driven radius so gameplay still works.
+    const r = assets ? enemyRadiusFromTexture({ assets, kind, spriteScale: def.spriteScale }) : def.stats.radiusPx;
+
+    let g: Container;
+    if (assets) {
+        const sprite = new Sprite(assets.enemy[kind].base);
+        sprite.anchor.set(0.5);
+        sprite.scale.set(def.spriteScale);
+        g = sprite;
+    } else {
+        // Assets not ready yet; show a simple placeholder.
+        const ph = new Graphics();
+        ph.moveTo(0, -r)
+            .lineTo(r * 0.8, r * 0.9)
+            .lineTo(0, r * 0.45)
+            .lineTo(-r * 0.8, r * 0.9)
+            .closePath()
+            .fill({ color: 0xff7c7c, alpha: 0.95 })
+            .stroke({ color: 0x3a0f18, width: 2, alpha: 0.9 });
+        g = ph;
+    }
 
     // Spawn strictly outside the visible screen so enemies "fly in" instead of popping in.
     const spawnMargin = 24;
@@ -194,7 +227,7 @@ export function createEnemy(args: { width: number; height: number; shipX: number
     dirX = j.x;
     dirY = j.y;
 
-    const speed = Math.min(GAME_CONFIG.enemyMaxSpeedPxPerSec, 70 + Math.random() * 45);
+    const speed = Math.min(def.stats.maxSpeedPxPerSec, def.stats.maxSpeedPxPerSec * (0.55 + Math.random() * 0.35));
     const vx = dirX * speed;
     const vy = dirY * speed;
 
@@ -204,16 +237,31 @@ export function createEnemy(args: { width: number; height: number; shipX: number
     const seed = Math.random();
     const fireCooldownLeft = 0.6 + seed * 0.6;
 
-    return { g, vx, vy, r, hp: GAME_CONFIG.enemyHp, fireCooldownLeft, seed };
+    return { g, kind, vx, vy, r, hp: def.stats.hp, fireCooldownLeft, seed };
 }
 
-export function createEnemyBullet(args: { x: number; y: number; vx: number; vy: number }): EnemyBullet {
+export function createEnemyBullet(args: {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    r: number;
+    life: number;
+    damage: number;
+}): EnemyBullet {
     const g = new Graphics();
-    g.circle(0, 0, GAME_CONFIG.enemyBulletRadiusPx).fill({ color: 0xffc0c0, alpha: 0.98 });
+    g.circle(0, 0, args.r).fill({ color: 0xffc0c0, alpha: 0.98 });
     g.x = args.x;
     g.y = args.y;
     audio.playEnemyShoot();
-    return { g, vx: args.vx, vy: args.vy, r: GAME_CONFIG.enemyBulletRadiusPx, life: GAME_CONFIG.enemyBulletLifetimeSec };
+    return {
+        g,
+        vx: args.vx,
+        vy: args.vy,
+        r: args.r,
+        life: args.life,
+        damage: args.damage
+    };
 }
 
 

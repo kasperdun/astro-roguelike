@@ -1,5 +1,5 @@
 import type { Container } from 'pixi.js';
-import { GAME_CONFIG } from '../../../config/gameConfig';
+import { getEnemyDef } from '../../enemies/enemyCatalog';
 import { flashEnemy } from './runEffects';
 import { circleHit, lerp01, rotate, wrap } from './runMath';
 import { createEnemyBullet } from './runSpawn';
@@ -31,6 +31,9 @@ export function updateEnemiesAndFire(args: {
   const { enemies, enemyBullets, world, dt, width, height, shipX, shipY, allowFire } = args;
 
   for (const e of enemies) {
+    const def = getEnemyDef(e.kind);
+    const stats = def.stats;
+
     const dx = shipX - e.g.x;
     const dy = shipY - e.g.y;
     const d = Math.hypot(dx, dy) || 1;
@@ -38,8 +41,8 @@ export function updateEnemiesAndFire(args: {
     const ny = dy / d;
 
     // Steering: keep preferred range (with hysteresis) + small strafe for variety.
-    const preferred = GAME_CONFIG.enemyPreferredRangePx;
-    const band = GAME_CONFIG.enemyRangeHysteresisPx;
+    const preferred = stats.preferredRangePx;
+    const band = stats.rangeHysteresisPx;
 
     // Move towards/away depending on distance to target.
     let desire = 0;
@@ -48,7 +51,7 @@ export function updateEnemiesAndFire(args: {
 
     // Smooth the desire a bit based on how far we are from preferred.
     const distT = lerp01(Math.abs(d - preferred) / Math.max(1, preferred));
-    const accel = GAME_CONFIG.enemyAccelPxPerSec2 * (0.35 + 0.65 * distT);
+    const accel = stats.accelPxPerSec2 * (0.35 + 0.65 * distT);
 
     // Per-enemy strafe: perpendicular vector with oscillating sign and magnitude.
     const px = -ny;
@@ -63,13 +66,13 @@ export function updateEnemiesAndFire(args: {
     e.vy += ay * dt;
 
     // Damping (exponential for dt stability).
-    const damp = Math.exp(-GAME_CONFIG.enemyDampingPerSec * dt);
+    const damp = Math.exp(-stats.dampingPerSec * dt);
     e.vx *= damp;
     e.vy *= damp;
 
     // Clamp speed.
     const sp = Math.hypot(e.vx, e.vy);
-    const max = GAME_CONFIG.enemyMaxSpeedPxPerSec;
+    const max = stats.maxSpeedPxPerSec;
     if (sp > max) {
       const s = max / (sp || 1);
       e.vx *= s;
@@ -81,7 +84,8 @@ export function updateEnemiesAndFire(args: {
     wrap(e.g, width, height, e.r);
 
     // Face the player (purely visual; bullets use aim vector below).
-    e.g.rotation = Math.atan2(dy, dx);
+    // Enemy sprites have the nose pointing up, while Pixi's rotation=0 points right.
+    e.g.rotation = Math.atan2(dy, dx) + Math.PI / 2;
 
     // Fire control.
     e.fireCooldownLeft = Math.max(0, e.fireCooldownLeft - dt);
@@ -91,17 +95,25 @@ export function updateEnemiesAndFire(args: {
     // Don't shoot from very far away; keeps early combat readable.
     if (d > preferred * 2.2) continue;
 
-    const baseDelay = 1 / Math.max(0.001, GAME_CONFIG.enemyFireRatePerSec);
+    const baseDelay = 1 / Math.max(0.001, stats.fireRatePerSec);
     e.fireCooldownLeft = baseDelay * (0.85 + e.seed * 0.3);
 
     // Aim at ship with slight random-ish jitter based on seed.
     const aimJitterRad = ((Math.sin(strafePhase * 1.7) * 0.5 + 0.5) * 2 - 1) * (7 * Math.PI) / 180;
     const aim = rotate(nx, ny, aimJitterRad);
-    const bvx = aim.x * GAME_CONFIG.enemyBulletSpeedPxPerSec + e.vx * 0.15;
-    const bvy = aim.y * GAME_CONFIG.enemyBulletSpeedPxPerSec + e.vy * 0.15;
+    const bvx = aim.x * stats.bulletSpeedPxPerSec + e.vx * 0.15;
+    const bvy = aim.y * stats.bulletSpeedPxPerSec + e.vy * 0.15;
 
     const muzzle = e.r + 6;
-    const bullet = createEnemyBullet({ x: e.g.x + aim.x * muzzle, y: e.g.y + aim.y * muzzle, vx: bvx, vy: bvy });
+    const bullet = createEnemyBullet({
+      x: e.g.x + aim.x * muzzle,
+      y: e.g.y + aim.y * muzzle,
+      vx: bvx,
+      vy: bvy,
+      r: stats.bulletRadiusPx,
+      life: stats.bulletLifetimeSec,
+      damage: stats.bulletDamage
+    });
     world.addChild(bullet.g);
     enemyBullets.push(bullet);
   }
@@ -148,7 +160,7 @@ export function resolveEnemyBulletShipCollisions(args: {
   shipX: number;
   shipY: number;
   shipR: number;
-  onShipHit: () => void;
+  onShipHit: (bullet: EnemyBullet) => void;
 }) {
   const { bullets, world, shipX, shipY, shipR, onShipHit } = args;
   for (let bi = bullets.length - 1; bi >= 0; bi--) {
@@ -158,7 +170,7 @@ export function resolveEnemyBulletShipCollisions(args: {
 
     world.removeChild(b.g);
     bullets.splice(bi, 1);
-    onShipHit();
+    onShipHit(b);
   }
 }
 
@@ -167,7 +179,7 @@ export function resolveShipEnemyCollisions(args: {
   shipX: number;
   shipY: number;
   shipR: number;
-  onShipHit: () => void;
+  onShipHit: (enemy: Enemy) => void;
   /** Apply a simple push-out response to separate ship and enemy. */
   onPushOut: (nx: number, ny: number, overlap: number) => void;
 }) {
@@ -175,7 +187,7 @@ export function resolveShipEnemyCollisions(args: {
   for (const e of enemies) {
     if (!circleHit(shipX, shipY, shipR, e.g.x, e.g.y, e.r)) continue;
 
-    onShipHit();
+    onShipHit(e);
 
     const dx = shipX - e.g.x;
     const dy = shipY - e.g.y;

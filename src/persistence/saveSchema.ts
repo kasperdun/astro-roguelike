@@ -17,6 +17,9 @@ export const SaveV1Schema = z
     bankMinerals: z.number().finite().nonnegative(),
     bankScrap: z.number().finite().nonnegative(),
 
+    musicEnabled: z.boolean(),
+    sfxEnabled: z.boolean(),
+
     /** Stored as a plain record; we sanitize keys/levels against known UpgradeId list at load time. */
     purchasedUpgrades: z.record(z.string(), z.number().finite()),
 
