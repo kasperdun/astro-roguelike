@@ -163,6 +163,42 @@ export function updateEnemiesAndFire(args: {
   }
 }
 
+export function updateEnemiesPassive(args: {
+  enemies: Enemy[];
+  dt: number;
+  width: number;
+  height: number;
+  levelId: number;
+}) {
+  const { enemies, dt, width, height, levelId } = args;
+  for (const e of enemies) {
+    const stats = getEnemyStatsForLevel({ kind: e.kind, levelId });
+
+    // Damping (exponential for dt stability).
+    const damp = Math.exp(-stats.dampingPerSec * dt);
+    e.vx *= damp;
+    e.vy *= damp;
+
+    // Clamp speed.
+    const sp = Math.hypot(e.vx, e.vy);
+    const max = stats.maxSpeedPxPerSec;
+    if (sp > max) {
+      const s = max / (sp || 1);
+      e.vx *= s;
+      e.vy *= s;
+    }
+
+    e.g.x += e.vx * dt;
+    e.g.y += e.vy * dt;
+    wrap(e.g, width, height, e.r);
+
+    // Face movement direction if moving, otherwise keep current rotation.
+    if (sp > 1) e.g.rotation = Math.atan2(e.vy, e.vx) + Math.PI / 2;
+
+    renderEnemyHpBar(e);
+  }
+}
+
 export function resolveBulletEnemyCollisions(args: {
   bullets: Projectile[];
   enemies: Enemy[];

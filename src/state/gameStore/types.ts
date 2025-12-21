@@ -1,9 +1,29 @@
 import type { PurchasedUpgrades, PurchaseResult, UpgradeId } from '../../progression/upgrades';
 import type { SaveLatest } from '../../persistence/save';
 
-export type GameMode = 'menu' | 'run';
+export type GameMode = 'menu' | 'run' | 'run_end';
 export type MenuTabId = 'update' | 'craft' | 'quests';
 export type LevelId = 1 | 2;
+
+export type RunPickupKind = 'minerals' | 'scrap' | 'fuel' | 'health' | 'magnet' | 'core';
+
+export type RunEndReason = 'death' | 'out_of_fuel' | 'boss_defeated' | 'quit';
+export type RunEndOutcome = 'defeat' | 'victory';
+
+export type RunEndSummary = {
+    levelId: LevelId;
+    outcome: RunEndOutcome;
+    reason: RunEndReason;
+    timeSec: number;
+    asteroidsKilled: number;
+    enemiesKilled: number;
+    /** Pickups collected during the session (even if fuel/health were capped). */
+    collected: Record<RunPickupKind, number>;
+    /** Bankable run resources earned (these are moved to bank when run ends). */
+    minerals: number;
+    scrap: number;
+    cores: number;
+};
 
 export type RunSession = {
     levelId: LevelId;
@@ -48,6 +68,7 @@ export type GameState = {
     selectedLevelId: LevelId;
     unlockedLevels: Record<LevelId, boolean>;
     run: RunSession | null;
+    runEndSummary: RunEndSummary | null;
 
     /** True after we loaded & applied save data once. */
     hasHydrated: boolean;
@@ -72,7 +93,10 @@ export type GameState = {
     setActiveTab: (tab: MenuTabId) => void;
     selectLevel: (levelId: LevelId) => void;
     startRun: () => void;
+    startRunAtLevel: (levelId: LevelId) => void;
     endRunToMenu: () => void;
+    endRunToSummary: (summary: RunEndSummary) => void;
+    closeRunEndSummaryToMenu: () => void;
     hydrateFromSave: (save: SaveLatest) => void;
 
     setMusicEnabled: (enabled: boolean) => void;

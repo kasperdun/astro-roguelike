@@ -4,6 +4,7 @@ import { useGameStore } from '../state/gameStore';
 import { createGameHost, type GameHost } from '../game/core/GameHost';
 import { MenuOverlay } from './menu/MenuOverlay';
 import { EscapeDialog } from './EscapeDialog';
+import { RunEndOverlay } from './RunEndOverlay';
 import { audio } from '../audio/audio';
 import { loadSave } from '../persistence/save';
 
@@ -47,6 +48,7 @@ export function AppShell() {
   }, [host, mode, runLevelId]);
 
   useEffect(() => {
+    // Keep run music during the end-of-run overlay since the run scene stays active behind it.
     audio.setBackgroundMusic(mode === 'menu' ? 'menu' : 'run');
     return () => audio.stopAll();
   }, [mode]);
@@ -58,6 +60,7 @@ export function AppShell() {
       e.preventDefault();
 
       const s = useGameStore.getState();
+      if (s.mode === 'run_end') return;
       if (s.escapeDialogOpen) s.closeEscapeDialog();
       else s.openEscapeDialog();
     };
@@ -90,6 +93,7 @@ export function AppShell() {
       />
 
       {mode === 'menu' ? <MenuOverlay onGoToMine={startRun} /> : null}
+      {mode === 'run_end' ? <RunEndOverlay /> : null}
       {escapeDialogOpen ? <EscapeDialog /> : null}
     </div>
   );

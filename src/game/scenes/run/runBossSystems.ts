@@ -203,6 +203,35 @@ export function updateBossAndFire(args: {
   }
 }
 
+export function updateBossPassive(args: { boss: Boss; dt: number; width: number; height: number; levelId: number }) {
+  const { boss: b, dt, width, height, levelId } = args;
+  const s = getBossStatsForLevel({ kind: b.kind, levelId });
+
+  const damp = Math.exp(-s.dampingPerSec * dt);
+  b.vx *= damp;
+  b.vy *= damp;
+
+  const sp = Math.hypot(b.vx, b.vy);
+  const max = s.maxSpeedPxPerSec;
+  if (sp > max) {
+    const k = max / (sp || 1);
+    b.vx *= k;
+    b.vy *= k;
+  }
+
+  b.g.x += b.vx * dt;
+  b.g.y += b.vy * dt;
+  wrap(b.g, width, height, b.r);
+
+  if (sp > 1) b.g.rotation = Math.atan2(b.vy, b.vx) + Math.PI / 2;
+
+  // Cooldowns still tick so the boss doesn't "store up" a burst while the overlay is open.
+  b.modeTimeLeft = Math.max(0, b.modeTimeLeft - dt);
+  b.aimedCooldownLeft = Math.max(0, b.aimedCooldownLeft - dt);
+  b.burstShotTimerLeft = Math.max(0, b.burstShotTimerLeft - dt);
+  b.ringTelegraphLeft = Math.max(0, b.ringTelegraphLeft - dt);
+}
+
 export function resolveBulletBossCollisions(args: {
   bullets: Projectile[];
   boss: Boss;

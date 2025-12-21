@@ -3,12 +3,13 @@ import { useGameStore } from '../../../state/gameStore';
 import { audio } from '../../../audio/audio';
 import type { RunRuntime } from './runRuntime';
 import { updateAsteroids, updateBullets, updatePickups, resolveBulletAsteroidCollisions } from './runUpdateSystems';
-import { resolveBulletBossCollisions, resolveShipBossCollision, updateBossAndFire, updateBossBullets } from './runBossSystems';
+import { resolveBulletBossCollisions, resolveShipBossCollision, updateBossAndFire, updateBossBullets, updateBossPassive } from './runBossSystems';
 import {
     resolveBulletEnemyCollisions,
     resolveEnemyBulletShipCollisions,
     resolveShipEnemyCollisions,
     updateEnemiesAndFire,
+    updateEnemiesPassive,
     updateEnemyBullets
 } from './runEnemySystems';
 import { destroyAsteroid, destroyBoss, destroyEnemy, damageFromShipBossCollision, damageFromShipEnemyCollision } from './runDestroy';
@@ -24,11 +25,15 @@ export function stepWorldAndCombat(args: {
     dt: number;
     shipX: number;
     shipY: number;
+    /** If false, only movement updates run (no firing, no collisions, no pickup collection). */
+    combatEnabled: boolean;
     stats: RunStats;
     store: StoreApi;
     purchasedUpgrades: StoreState['purchasedUpgrades'];
 }) {
     const { runtime, dt, shipX, shipY, stats, store, purchasedUpgrades } = args;
+    const controlsLocked = runtime.shouldLockControls();
+    const combatEnabled = args.combatEnabled && !runtime.isShipDead;
 
     const handleBossDestroyed = () => {
         const boss = runtime.boss;
@@ -40,8 +45,7 @@ export function stepWorldAndCombat(args: {
             spawnPickup: (kind, amount, x, y) => runtime.spawnPickup(kind, amount, x, y),
             onBossKilled: () => {
                 runtime.boss = null;
-                runtime.bossDefeated = true;
-                runtime.victoryTimerLeft = GAME_CONFIG.bossVictoryDelaySec;
+                runtime.beginVictorySequence();
 
                 // Clear boss bullets so the end-of-run window is readable.
                 for (const bb of runtime.bossBullets) runtime.world.removeChild(bb.g);
@@ -56,9 +60,27 @@ export function stepWorldAndCombat(args: {
     updateAsteroids({ asteroids: runtime.asteroids, dt, width: runtime.width, height: runtime.height });
 
     if (runtime.boss) {
-        updateBossAndFire({
-            boss: runtime.boss,
-            bossBullets: runtime.bossBullets,
+        if (combatEnabled) {
+            updateBossAndFire({
+                boss: runtime.boss,
+                bossBullets: runtime.bossBullets,
+                world: runtime.world,
+                dt,
+                width: runtime.width,
+                height: runtime.height,
+                shipX,
+                shipY,
+                levelId: runtime.levelId,
+                allowFire: !controlsLocked
+            });
+        } else {
+            updateBossPassive({ boss: runtime.boss, dt, width: runtime.width, height: runtime.height, levelId: runtime.levelId });
+        }
+    }
+    if (combatEnabled) {
+        updateEnemiesAndFire({
+            enemies: runtime.enemies,
+            enemyBullets: runtime.enemyBullets,
             world: runtime.world,
             dt,
             width: runtime.width,
@@ -66,46 +88,43 @@ export function stepWorldAndCombat(args: {
             shipX,
             shipY,
             levelId: runtime.levelId,
-            allowFire: !runtime.ship.isWarpingIn
+            allowFire: !controlsLocked
         });
+    } else {
+        updateEnemiesPassive({ enemies: runtime.enemies, dt, width: runtime.width, height: runtime.height, levelId: runtime.levelId });
     }
-    updateEnemiesAndFire({
-        enemies: runtime.enemies,
-        enemyBullets: runtime.enemyBullets,
-        world: runtime.world,
-        dt,
-        width: runtime.width,
-        height: runtime.height,
-        shipX,
-        shipY,
-        levelId: runtime.levelId,
-        allowFire: !runtime.ship.isWarpingIn
-    });
 
+    const pickupsShipX = combatEnabled ? shipX : Number.POSITIVE_INFINITY;
+    const pickupsShipY = combatEnabled ? shipY : Number.POSITIVE_INFINITY;
     updatePickups({
         pickups: runtime.pickups,
         world: runtime.world,
         dt,
         width: runtime.width,
         height: runtime.height,
-        shipX,
-        shipY,
-        onCollectMinerals: (amount) => store.addMinerals(amount),
-        onCollectScrap: (amount) => store.addScrap(amount),
-        onCollectCores: (amount) => store.addCores(amount),
-        onCollectFuel: (amount) => store.addFuel(amount),
-        onCollectHealth: (amount) => store.addHealth(amount),
-        magnetRadiusPx: runtime.pickupVacuumLeft > 0 ? 999999 : stats.pickupMagnetRadiusPx,
-        magnetAccelPxPerSec2: runtime.pickupVacuumLeft > 0 ? 7200 : undefined,
-        onCollect: (p) => {
-            audio.playPickupPop();
-            if (p.kind === 'magnet') {
-                // Vacuum effect: temporarily pull *all* pickups on the level to the ship.
-                runtime.pickupVacuumLeft = Math.max(runtime.pickupVacuumLeft, 2.6);
+        shipX: pickupsShipX,
+        shipY: pickupsShipY,
+        onCollectMinerals: combatEnabled ? (amount) => store.addMinerals(amount) : () => { },
+        onCollectScrap: combatEnabled ? (amount) => store.addScrap(amount) : () => { },
+        onCollectCores: combatEnabled ? (amount) => store.addCores(amount) : () => { },
+        onCollectFuel: combatEnabled ? (amount) => store.addFuel(amount) : () => { },
+        onCollectHealth: combatEnabled ? (amount) => store.addHealth(amount) : () => { },
+        magnetRadiusPx: combatEnabled ? (runtime.pickupVacuumLeft > 0 ? 999999 : stats.pickupMagnetRadiusPx) : 0,
+        magnetAccelPxPerSec2: combatEnabled ? (runtime.pickupVacuumLeft > 0 ? 7200 : undefined) : 0,
+        onCollect: combatEnabled
+            ? (p) => {
+                audio.playPickupPop();
+                runtime.registerPickupCollected(p.kind, p.amount);
+                if (p.kind === 'magnet') {
+                    // Vacuum effect: temporarily pull *all* pickups on the level to the ship.
+                    runtime.pickupVacuumLeft = Math.max(runtime.pickupVacuumLeft, 2.6);
+                }
             }
-        }
+            : undefined
     });
     if (runtime.pickupVacuumLeft > 0 && runtime.pickups.length === 0) runtime.pickupVacuumLeft = 0;
+
+    if (!combatEnabled) return;
 
     if (runtime.boss) {
         resolveBulletBossCollisions({
@@ -189,7 +208,7 @@ export function stepWorldAndCombat(args: {
     });
 
     // Collision: enemy bullets → ship (with invuln).
-    if (!runtime.ship.isWarpingIn && runtime.shipInvulnLeft <= 0) {
+    if (!runtime.ship.isWarpingIn && !runtime.ship.isWarpingOut && runtime.shipInvulnLeft <= 0) {
         resolveEnemyBulletShipCollisions({
             bullets: runtime.bossBullets,
             world: runtime.world,
@@ -222,7 +241,7 @@ export function stepWorldAndCombat(args: {
     }
 
     // Collision: ship vs enemies (with invuln).
-    if (!runtime.ship.isWarpingIn && runtime.shipInvulnLeft <= 0) {
+    if (!runtime.ship.isWarpingIn && !runtime.ship.isWarpingOut && runtime.shipInvulnLeft <= 0) {
         if (runtime.boss) {
             resolveShipBossCollision({
                 boss: runtime.boss,
@@ -269,7 +288,7 @@ export function stepWorldAndCombat(args: {
     }
 
     // Collision: ship vs asteroids (with invuln).
-    if (!runtime.ship.isWarpingIn && runtime.shipInvulnLeft <= 0) {
+    if (!runtime.ship.isWarpingIn && !runtime.ship.isWarpingOut && runtime.shipInvulnLeft <= 0) {
         resolveShipAsteroidCollisions({
             shipX,
             shipY,

@@ -8,6 +8,7 @@ export type ShipDamageStage = 'full' | 'slight' | 'damaged' | 'very_damaged';
 export class RunShipView {
     public readonly sprite = new Sprite();
     public isWarpingIn = false;
+    public isWarpingOut = false;
 
     private stage: ShipDamageStage = 'full';
 
@@ -20,12 +21,23 @@ export class RunShipView {
 
         this.sprite.x = args.width / 2;
         this.sprite.y = args.height / 2;
+        this.sprite.visible = true;
         this.sprite.alpha = 1;
     }
 
     public resetTweens() {
         gsap.killTweensOf(this.sprite);
         this.isWarpingIn = false;
+        this.isWarpingOut = false;
+    }
+
+    /** Immediately hides the ship (used on death, so the wreck doesn't remain under the end overlay). */
+    public hideNow() {
+        gsap.killTweensOf(this.sprite);
+        this.isWarpingIn = false;
+        this.isWarpingOut = false;
+        this.sprite.alpha = 0;
+        this.sprite.visible = false;
     }
 
     public applyVisualSize() {
@@ -85,6 +97,25 @@ export class RunShipView {
             ease: 'power3.out',
             onComplete: () => {
                 this.isWarpingIn = false;
+            }
+        });
+    }
+
+    public warpOut(args: { width: number; height: number; durationSec: number; onComplete?: () => void }) {
+        const targetX = args.width + 80;
+        const targetY = args.height / 2;
+
+        this.isWarpingOut = true;
+        gsap.killTweensOf(this.sprite);
+        gsap.to(this.sprite, {
+            duration: args.durationSec,
+            x: targetX,
+            y: targetY,
+            alpha: 0,
+            ease: 'power3.in',
+            onComplete: () => {
+                this.isWarpingOut = false;
+                args.onComplete?.();
             }
         });
     }

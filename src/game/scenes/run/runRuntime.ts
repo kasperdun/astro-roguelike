@@ -8,6 +8,7 @@ import { RunPlayerWeapons } from './runPlayerWeapons';
 import { getRunAssets, type RunAssets } from '../../runAssets';
 import { pickEnemyKindForSpawn } from '../../enemies/enemyCatalog';
 import type { LevelId } from '../../../state/gameStore';
+import type { RunEndReason } from '../../../state/gameStore/types';
 
 export class RunRuntime {
     public width = 1;
@@ -27,6 +28,9 @@ export class RunRuntime {
     public bossDefeated = false;
     public victoryTimerLeft = 0;
 
+    /** True after the ship was destroyed in this run (used to disable targeting/ship interactions). */
+    public isShipDead = false;
+
     public shipVx = 0;
     public shipVy = 0;
     /** Aim angle in world-space (0 = right). Used for shooting, independent from sprite rotation offset. */
@@ -40,6 +44,14 @@ export class RunRuntime {
     public enemiesKilled = 0;
     public asteroidsKilled = 0;
     public runTimeSec = 0;
+    public collected: Record<PickupKind, number> = { minerals: 0, scrap: 0, fuel: 0, health: 0, magnet: 0, core: 0 };
+
+    public endSequence: null | {
+        kind: 'victory';
+        phase: 'pull_loot' | 'warp_out';
+        /** Set after warp-out tween completes. */
+        warpOutDone: boolean;
+    } = null;
 
     /** Boss progress accumulated from kills before the boss spawns. */
     public bossProgress = 0;
@@ -78,6 +90,7 @@ export class RunRuntime {
         this.bossBullets = [];
         this.bossDefeated = false;
         this.victoryTimerLeft = 0;
+        this.isShipDead = false;
 
         this.shipVx = 0;
         this.shipVy = 0;
@@ -92,6 +105,8 @@ export class RunRuntime {
         this.enemiesKilled = 0;
         this.asteroidsKilled = 0;
         this.runTimeSec = 0;
+        this.collected = { minerals: 0, scrap: 0, fuel: 0, health: 0, magnet: 0, core: 0 };
+        this.endSequence = null;
 
         this.bossProgress = 0;
         this.bossProgressMax = GAME_CONFIG.bossProgressRequired;
@@ -123,6 +138,7 @@ export class RunRuntime {
         this.bossBullets = [];
         this.bossDefeated = false;
         this.victoryTimerLeft = 0;
+        this.isShipDead = false;
     }
 
     public resize(width: number, height: number) {
@@ -219,6 +235,38 @@ export class RunRuntime {
     public registerAsteroidKilled() {
         this.asteroidsKilled++;
         this.addBossProgress(GAME_CONFIG.bossProgressPerAsteroidKill);
+    }
+
+    public registerPickupCollected(kind: PickupKind, amount: number) {
+        if (amount <= 0) return;
+        const prev = this.collected[kind] ?? 0;
+        this.collected[kind] = prev + amount;
+    }
+
+    public beginVictorySequence() {
+        this.bossDefeated = true;
+        this.victoryTimerLeft = 0;
+        // Pull all pickups to the ship and wait until they're collected.
+        this.pickupVacuumLeft = Math.max(this.pickupVacuumLeft, 999999);
+        // Make the ship invulnerable during the sequence.
+        this.shipInvulnLeft = Math.max(this.shipInvulnLeft, 999999);
+        this.endSequence = { kind: 'victory', phase: 'pull_loot', warpOutDone: false };
+        // Also force-stop player input.
+        this.input.w = false;
+        this.input.a = false;
+        this.input.s = false;
+        this.input.d = false;
+        this.input.firing = false;
+    }
+
+    public shouldLockControls(): boolean {
+        return this.ship.isWarpingIn || this.ship.isWarpingOut || this.endSequence !== null;
+    }
+
+    public getEndReasonIfAny(runHp: number, runFuel: number): RunEndReason | null {
+        if (runHp <= 0) return 'death';
+        if (runFuel <= 0) return 'out_of_fuel';
+        return null;
     }
 
     private addBossProgress(delta: number) {
