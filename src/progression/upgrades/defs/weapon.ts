@@ -4,7 +4,6 @@ import type { UpgradeNode } from '../types';
 export type UpgradeDefs = Record<UpgradeId, Omit<UpgradeNode, 'id'>>;
 
 export const WEAPON_UPGRADE_DEFS: Partial<UpgradeDefs> = {
-    // ROOT: базовый урон — под новый “микро-масштаб” (стартовый урон игрока = 1).
     weapon_damage: {
         title: 'Weapon Calibration',
         description: 'Базовый урон оружия. +1 урон за уровень.',
